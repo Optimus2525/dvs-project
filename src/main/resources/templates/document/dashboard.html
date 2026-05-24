@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="lv" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/base :: layout(~{::section})}">
+<body>
+<section>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="h4 mb-0">Ienākošā korespondence 2026</h2>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-bordered align-middle text-nowrap">
+                            <thead class="table-light">
+                            <tr>
+                                <th>ID</th>
+                                <th>Numurs</th>
+
+                                <!-- DINAMISKĀS KOLONNAS (Virsraksti) -->
+                                <th th:each="field : ${dynamicFields}" th:text="${field.name}"></th>
+
+                                <th>Izveidoja</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <!-- DOKUMENTU DATI -->
+                            <tr th:each="card : ${documentCards}">
+                                <td th:text="${card.id}"></td>
+                                <td th:text="${card.documentNumber}"></td>
+
+                                <!-- DINAMISKĀS VĒRTĪBAS NO JSONB AR FORMATĒŠANU -->
+                                <td th:each="field : ${dynamicFields}">
+                                    <th:block th:if="${card.metadata != null and card.metadata[field.name] != null and card.metadata[field.name] != ''}">
+
+                                        <th:block th:switch="${field.type}">
+                                            <!-- Ja lauks ir DATE, tiek izsaukts Java LocalDate parsētājs un noformatēts uz dd.MM.yyyy -->
+                                            <span th:case="'DATE'"
+                                                  th:text="${#temporals.format(T(java.time.LocalDate).parse(card.metadata[field.name]), 'dd.MM.yyyy')}">
+                                                    </span>
+
+                                            <!-- Visiem pārējiem tipiem (TEXT, SELECT) vērtība tiek attēlota kā parasti -->
+                                            <span th:case="*" th:text="${card.metadata[field.name]}"></span>
+                                        </th:block>
+
+                                    </th:block>
+                                </td>
+
+                                <td th:text="${card.createdBy}"></td>
+                            </tr>
+
+                            <!-- Ja saraksts ir tukšs -->
+                            <tr th:if="${#lists.isEmpty(documentCards)}">
+                                <td th:colspan="${dynamicFields.size() + 3}" class="text-center text-muted py-4">
+                                    Šajā sarakstā vēl nav pievienots neviens dokuments.
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card shadow-sm border-primary">
+                <div class="card-header bg-primary text-white fw-bold">
+                    Jaunas kartītes forma (Ģenerēta dinamiski!)
+                </div>
+                <div class="card-body">
+                    <form id="dynamicDocForm">
+                        <!-- Slēptie pamatdati -->
+                        <input type="hidden" id="documentListId" th:value="${listId}">
+
+                        <!-- DINAMISKAIS CIKLS: Zīmē laukus atkarībā no to tipa -->
+                        <th:block th:each="field : ${dynamicFields}">
+
+                            <th:block th:switch="${field.type}">
+
+                                <!-- TEXT tips -->
+                                <th:block th:case="'TEXT'">
+                                    <div th:replace="~{components/forms :: textInput(
+                                            id=${'field_' + field.name}, label=${field.name}, name=${field.name}, value='', required=true)}"></div>
+                                </th:block>
+
+                                <!-- DATE tips -->
+                                <th:block th:case="'DATE'">
+                                    <div th:replace="~{components/forms :: dateInput(
+                                            id=${'field_' + field.name}, label=${field.name}, name=${field.name}, value='', required=true)}"></div>
+                                </th:block>
+
+                                <!-- SELECT tips -->
+                                <th:block th:case="'SELECT'">
+                                    <div th:replace="~{components/forms :: selectInput(
+                                            id=${'field_' + field.name}, label=${field.name}, name=${field.name},
+                                            optionsList=${field.options != null ? field.options['values'] : null}, selectedValue='', required=true)}"></div>
+                                </th:block>
+
+                            </th:block>
+
+                        </th:block>
+
+                        <button type="button" id="saveDocBtn" class="btn btn-success w-100 mt-3">Saglabāt sistēmā</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vanilla JS datu savākšanai un sūtīšanai -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const saveBtn = document.getElementById('saveDocBtn');
+
+            saveBtn.addEventListener('click', function() {
+                // 1. Savācam pamatdatus
+                const listId = document.getElementById('documentListId').value;
+                const metadata = {};
+
+                // 2. Savācam visus dinamiskos laukus (tiem id sākas ar 'field_')
+                const dynamicInputs = document.querySelectorAll("input[id^='field_'], select[id^='field_']");
+                dynamicInputs.forEach(input => {
+                    // Ja izmanto altInput (Flatpickr), ņemam reālo (slēpto) lauku, kam nav klases 'form-control input'
+                    if (input.type !== 'hidden' || input.classList.contains('flatpickr-input')) {
+                        metadata[input.name] = input.value;
+                    }
+                });
+
+                // 3. Sagatavojam DTO objektu
+                const payload = {
+                    documentListId: parseInt(listId),
+                    documentNumber: "GEN-" + Math.floor(Math.random() * 1000), // Pagaidu numurs
+                    createdBy: "Lietotājs", // Vēlāk ņemsim no Spring Security
+                    metadata: metadata
+                };
+
+                // 4. Sūtām uz mūsu API (Fetch API)
+                fetch('/api/v1/documents/cards', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                })
+                    .then(response => {
+                        if (!response.ok) throw new Error("Kļūda saglabājot datus!");
+                        return response.json();
+                    })
+                    .then(data => {
+                        alert("Dokuments veiksmīgi saglabāts! ID: " + data.id);
+                        document.getElementById('dynamicDocForm').reset();
+                    })
+                    .catch(error => {
+                        alert(error.message);
+                        console.error(error);
+                    });
+            });
+        });
+    </script>
+</section>
+</body>
+</html>

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="lv" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- 1. Teksta ievades komponents -->
+<div th:fragment="textInput(id, label, name, value, required)" class="mb-3">
+    <label th:for="${id}" class="form-label fw-bold">
+        <span th:text="${label}">Ievades lauks</span>
+        <span th:if="${required}" class="text-danger">*</span>
+    </label>
+    <input type="text" class="form-control"
+           th:id="${id}"
+           th:name="${name}"
+           th:value="${value}"
+           th:required="${required}">
+</div>
+
+<!-- 2. Datuma ievades komponents (Flatpickr to automātiski atpazīs, jo type="date") -->
+<div th:fragment="dateInput(id, label, name, value, required)" class="mb-3">
+    <label th:for="${id}" class="form-label fw-bold">
+        <span th:text="${label}">Datums</span>
+        <span th:if="${required}" class="text-danger">*</span>
+    </label>
+    <input type="date" class="form-control"
+           th:id="${id}"
+           th:name="${name}"
+           th:value="${value}"
+           th:required="${required}">
+</div>
+
+<!-- 3. Izvēlnes (Dropdown / Uzmeklēšana) komponents -->
+<div th:fragment="selectInput(id, label, name, optionsList, selectedValue, required)" class="mb-3">
+    <label th:for="${id}" class="form-label fw-bold">
+        <span th:text="${label}">Izvēlne</span>
+        <span th:if="${required}" class="text-danger">*</span>
+    </label>
+    <select class="form-select" th:id="${id}" th:name="${name}" th:required="${required}">
+        <option value="">-- Izvēlieties --</option>
+        <!-- Dinamiski ģenerē opcijas no saraksta -->
+        <option th:each="opt : ${optionsList}"
+                th:value="${opt}"
+                th:text="${opt}"
+                th:selected="${opt == selectedValue}"></option>
+    </select>
+</div>
+
+</body>
+</html>

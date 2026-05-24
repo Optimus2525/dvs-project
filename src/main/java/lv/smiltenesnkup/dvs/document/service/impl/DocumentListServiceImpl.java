@@ -4,8 +4,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import lv.smiltenesnkup.dvs.document.dto.DocumentListDTO;
 import lv.smiltenesnkup.dvs.document.mapper.DocumentListMapper;
+import lv.smiltenesnkup.dvs.document.mapper.FieldDefinitionMapper;
 import lv.smiltenesnkup.dvs.document.model.DocumentList;
 import lv.smiltenesnkup.dvs.document.repository.DocumentListRepository;
+import lv.smiltenesnkup.dvs.document.repository.FieldDefinitionRepository;
 import lv.smiltenesnkup.dvs.document.service.DocumentListService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +25,8 @@ public class DocumentListServiceImpl implements DocumentListService {
 
     private final DocumentListRepository documentListRepository;
     private final DocumentListMapper documentListMapper;
+    private final FieldDefinitionRepository fieldDefinitionRepository;
+    private final FieldDefinitionMapper fieldDefinitionMapper;
 
     /**
      * Izgūst visus sistēmā reģistrētos dokumentu sarakstus.
@@ -61,4 +65,17 @@ public class DocumentListServiceImpl implements DocumentListService {
 
         return documentListMapper.toDto(savedEntity);
     }
+
+    /**
+     * Izgūst visus dinamiskos laukus no datubāzes konkrētam sarakstam un pārveido tos uz DTO.
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public List<lv.smiltenesnkup.dvs.document.dto.FieldDefinitionDTO> getFieldsByListId(Long listId) {
+        log.info("Fetching dynamic fields for list ID: {}", listId);
+        return fieldDefinitionRepository.findAllByDocumentListId(listId).stream()
+                .map(fieldDefinitionMapper::toDto)
+                .collect(java.util.stream.Collectors.toList());
+    }
+
 }

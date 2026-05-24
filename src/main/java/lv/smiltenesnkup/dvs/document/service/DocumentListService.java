@@ -1,6 +1,7 @@
 package lv.smiltenesnkup.dvs.document.service;
 
 import lv.smiltenesnkup.dvs.document.dto.DocumentListDTO;
+import lv.smiltenesnkup.dvs.document.dto.FieldDefinitionDTO;
 
 import java.util.List;
 
@@ -14,5 +15,10 @@ public interface DocumentListService {
     DocumentListDTO getDocumentListById(Long id);
 
     DocumentListDTO createDocumentList(DocumentListDTO dto);
+
+    /**
+     * Izgūst visus dinamiskos laukus, kas piesaistīti konkrētam dokumentu sarakstam.
+     */
+    List<FieldDefinitionDTO> getFieldsByListId(Long listId);
 
 }

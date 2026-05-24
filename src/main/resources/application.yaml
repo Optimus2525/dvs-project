@@ -1,4 +1,11 @@
+app:
+  version: 1.0.1
+
+server:
+  port: 8095
+
 spring:
+
   application:
     name: dvs
 
@@ -28,3 +35,11 @@ spring:
     user:
       name: admin
       password: admin
+
+  # Datumu formatēšanas standarti (IZLABOTAS ATKĀPES)
+  mvc:
+    format:
+      date: dd.MM.yyyy
+  jackson:
+    date-format: dd.MM.yyyy
+    time-zone: Europe/Riga

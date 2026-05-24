@@ -1,0 +1,28 @@
+### 1. Izveidojam jaunu dokumentu sarakstu
+POST http://localhost:8080/api/v1/documents/lists
+Content-Type: application/json
+
+{
+  "code": "IN-2026",
+  "name": "Ienākošā korespondence 2026",
+  "description": "Visi ienākošie dokumenti šajā gadā"
+}
+
+### 2. Pievienojam dokumenta kartīti ar DINAMISKAJIEM JSONB METADATIEM
+POST http://localhost:8080/api/v1/documents/cards
+Content-Type: application/json
+
+{
+  "documentListId": 1,
+  "documentNumber": "DOC-001",
+  "createdBy": "Ilmārs",
+  "metadata": {
+    "Saņemšanas veids": "E-pasts",
+    "Sūtītājs": "SIA Lielais Klients",
+    "Līguma summa": 1500.50,
+    "Steidzams": true
+  }
+}
+
+### 3. Meklējam dokumentu JSONB kolonnā (Pēc saņemšanas veida)
+GET http://localhost:8080/api/v1/documents/lists/1/cards/search?key=Saņemšanas veids&value=E-pasts
