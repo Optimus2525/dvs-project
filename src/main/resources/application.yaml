@@ -1,0 +1,30 @@
+spring:
+  application:
+    name: dvs
+
+  # Datubāzes savienojums
+  datasource:
+    url: jdbc:postgresql://localhost:5432/dvs_db
+    username: postgres
+    password: root
+
+  # JPA un Hibernate iestatījumi
+  jpa:
+    hibernate:
+      ddl-auto: validate # Mēs izmantojam TIKAI Flyway datubāzes izmaiņām
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  # Flyway migrāciju rīks
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+
+  # Pagaidu lietotājs Spring Security, lai katru reizi neģenerējas random parole
+  security:
+    user:
+      name: admin
+      password: admin
