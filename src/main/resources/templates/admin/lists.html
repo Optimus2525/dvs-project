@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="lv" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/base :: layout(~{::section})}">
+<body>
+<section>
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="h4 mb-0">Jauna Saraksta Izveide</h2>
+  </div>
+
+  <div class="card shadow-sm border-primary">
+    <div class="card-body">
+      <form id="adminListForm">
+        <div class="row">
+          <div class="col-md-4">
+            <div th:replace="~{components/forms :: textInput('listCode', 'Saraksta Kods (piem. IEN-2026)', 'code', '', true)}"></div>
+          </div>
+          <div class="col-md-4">
+            <div th:replace="~{components/forms :: textInput('listName', 'Saraksta Nosaukums', 'name', '', true)}"></div>
+          </div>
+          <div class="col-md-4">
+            <div th:replace="~{components/forms :: textInput('listDesc', 'Apraksts', 'description', '', false)}"></div>
+          </div>
+        </div>
+
+        <hr class="my-4">
+        <h5 class="mb-3">Dinamiskie Lauki</h5>
+
+        <div id="fieldsContainer">
+          <!-- Dinamiski ģenerēti lauki parādīsies šeit -->
+        </div>
+
+        <button type="button" id="addFieldBtn" class="btn btn-outline-secondary mb-4">+ Pievienot Lauku</button>
+        <button type="button" id="saveListBtn" class="btn btn-primary w-100">Saglabāt Sarakstu un Laukus</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const fieldsContainer = document.getElementById('fieldsContainer');
+      const addFieldBtn = document.getElementById('addFieldBtn');
+      const saveListBtn = document.getElementById('saveListBtn');
+      let fieldIndex = 0;
+
+      // Pievieno jaunu lauka definīcijas rindu
+      addFieldBtn.addEventListener('click', function() {
+        const row = document.createElement('div');
+        row.className = 'row mb-3 align-items-end field-row';
+        row.innerHTML = `
+                    <div class="col-md-5">
+                        <label class="form-label fw-bold">Lauka Nosaukums</label>
+                        <input type="text" class="form-control field-name" required>
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label fw-bold">Lauka Tips</label>
+                        <select class="form-select field-type" required>
+                            <option value="TEXT">Teksts</option>
+                            <option value="DATE">Datums</option>
+                            <option value="SELECT">Izvēlne (Dropdown)</option>
+                            <option value="CHECKBOX">Izvēles rūtiņa (Checkbox)</option>
+                            <option value="TEXTAREA">Garš teksts (Textarea)</option>
+                            <option value="FILE">Fails</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="button" class="btn btn-danger w-100 remove-field-btn">Dzēst</button>
+                    </div>
+                `;
+        fieldsContainer.appendChild(row);
+        fieldIndex++;
+
+        row.querySelector('.remove-field-btn').addEventListener('click', function() {
+          row.remove();
+        });
+      });
+
+      // Datu saglabāšana (Demonstrācijai sagatavo payload un nosūta)
+      saveListBtn.addEventListener('click', function() {
+        const payload = {
+          code: document.getElementById('listCode').value,
+          name: document.getElementById('listName').value,
+          description: document.getElementById('listDesc').value,
+          fields: []
+        };
+
+        document.querySelectorAll('.field-row').forEach(row => {
+          payload.fields.push({
+            name: row.querySelector('.field-name').value,
+            type: row.querySelector('.field-type').value
+          });
+        });
+
+        // Vēlāk šeit tiks veikts Fetch API pieprasījums uz AdminApiController
+        console.log("Sagatavotie dati sūtīšanai:", payload);
+        alert("Saraksts sagatavots saglabāšanai! Apskati konsoli.");
+      });
+    });
+  </script>
+</section>
+</body>
+</html>

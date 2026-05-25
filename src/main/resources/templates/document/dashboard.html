@@ -96,6 +96,24 @@
                                             optionsList=${field.options != null ? field.options['values'] : null}, selectedValue='', required=true)}"></div>
                                 </th:block>
 
+                                <!-- CHECKBOX tips -->
+                                <th:block th:case="'CHECKBOX'">
+                                    <div th:replace="~{components/forms :: checkboxInput(
+                                            id=${'field_' + field.name}, label=${field.name}, name=${field.name}, checked=false)}"></div>
+                                </th:block>
+
+                                <!-- TEXTAREA tips -->
+                                <th:block th:case="'TEXTAREA'">
+                                    <div th:replace="~{components/forms :: textareaInput(
+                                            id=${'field_' + field.name}, label=${field.name}, name=${field.name}, value='', required=true, rows=3)}"></div>
+                                </th:block>
+
+                                <!-- FILE tips -->
+                                <th:block th:case="'FILE'">
+                                    <div th:replace="~{components/forms :: fileInput(
+                                            id=${'field_' + field.name}, label=${field.name}, name=${field.name}, required=false, multiple=true)}"></div>
+                                </th:block>
+
                             </th:block>
 
                         </th:block>

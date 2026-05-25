@@ -2,7 +2,9 @@ package lv.smiltenesnkup.dvs.document.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import lv.smiltenesnkup.dvs.admin.dto.DocumentListCreateRequestDTO;
 import lv.smiltenesnkup.dvs.document.dto.DocumentListDTO;
+import lv.smiltenesnkup.dvs.document.dto.FieldDefinitionDTO;
 import lv.smiltenesnkup.dvs.document.mapper.DocumentListMapper;
 import lv.smiltenesnkup.dvs.document.mapper.FieldDefinitionMapper;
 import lv.smiltenesnkup.dvs.document.model.DocumentList;
@@ -64,6 +66,37 @@ public class DocumentListServiceImpl implements DocumentListService {
         DocumentList savedEntity = documentListRepository.save(entity);
 
         return documentListMapper.toDto(savedEntity);
+    }
+
+    /**
+     * Izveido sarakstu un tam piesaistītos laukus vienas datubāzes tranzakcijas ietvaros.
+     */
+    @Override
+    @Transactional
+    public DocumentListDTO createListWithFields(lv.smiltenesnkup.dvs.admin.dto.DocumentListCreateRequestDTO requestDTO) {
+        log.info("Creating list {} with {} fields", requestDTO.getCode(), requestDTO.getFields().size());
+
+        // Izveido pamatentītiju
+        DocumentList listEntity = DocumentList.builder()
+                .code(requestDTO.getCode())
+                .name(requestDTO.getName())
+                .description(requestDTO.getDescription())
+                .build();
+
+        DocumentList savedList = documentListRepository.save(listEntity);
+
+        // Sagatavo un saglabā lauku definīcijas
+        List<lv.smiltenesnkup.dvs.document.model.FieldDefinition> fieldEntities = requestDTO.getFields().stream()
+                .map(fieldDto -> lv.smiltenesnkup.dvs.document.model.FieldDefinition.builder()
+                        .documentList(savedList)
+                        .name(fieldDto.getName())
+                        .type(fieldDto.getType())
+                        .build())
+                .collect(Collectors.toList());
+
+        fieldDefinitionRepository.saveAll(fieldEntities);
+
+        return documentListMapper.toDto(savedList);
     }
 
     /**

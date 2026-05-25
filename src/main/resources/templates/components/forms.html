@@ -44,5 +44,41 @@
     </select>
 </div>
 
+<!-- 4. Izvēles rūtiņas (Checkbox) komponents -->
+<div th:fragment="checkboxInput(id, label, name, checked)" class="form-check mb-3">
+    <input class="form-check-input" type="checkbox"
+           th:id="${id}"
+           th:name="${name}"
+           th:checked="${checked}">
+    <label class="form-check-label fw-bold" th:for="${id}" th:text="${label}">Izvēles rūtiņa</label>
+</div>
+
+<!-- 5. Teksta laukuma (Textarea) komponents -->
+<div th:fragment="textareaInput(id, label, name, value, required, rows)" class="mb-3">
+    <label th:for="${id}" class="form-label fw-bold">
+        <span th:text="${label}">Teksta lauks</span>
+        <span th:if="${required}" class="text-danger">*</span>
+    </label>
+    <textarea class="form-control"
+              th:id="${id}"
+              th:name="${name}"
+              th:rows="${rows}"
+              th:required="${required}"
+              th:text="${value}"></textarea>
+</div>
+
+<!-- 6. Failu pievienošanas komponents -->
+<div th:fragment="fileInput(id, label, name, required, multiple)" class="mb-3">
+    <label th:for="${id}" class="form-label fw-bold">
+        <span th:text="${label}">Pievienot failu</span>
+        <span th:if="${required}" class="text-danger">*</span>
+    </label>
+    <input class="form-control" type="file"
+           th:id="${id}"
+           th:name="${name}"
+           th:required="${required}"
+           th:multiple="${multiple}">
+</div>
+
 </body>
 </html>
