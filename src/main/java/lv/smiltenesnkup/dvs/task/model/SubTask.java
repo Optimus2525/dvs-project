@@ -3,9 +3,11 @@ package lv.smiltenesnkup.dvs.task.model;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDate;
+
 /**
- * Pārstāv apakšuzdevumu, kas ir pakārtots galvenajam uzdevumam.
- * Biznesa loģikas slānī (Service) tiek ierobežots maksimālais skaits līdz 3.
+ * Pārstāv apakšuzdevumu.
+ * Kompleksajos uzdevumos satur paplašinātu informāciju par izpildītāju, termiņiem un statusu.
  */
 @Entity
 @Table(name = "sub_task")
@@ -23,8 +25,23 @@ public class SubTask {
     @Column(nullable = false)
     private String title;
 
+    @Column(columnDefinition = "text")
+    private String description; // Teksta lauks, kur var ierakstīt arī atgriešanas iemeslu
+
+    @Column(name = "assignee")
+    private String assignee; // Konkrētā apakšuzdevuma atbildīgā persona
+
+    @Column(name = "due_date")
+    private LocalDate dueDate; // Apakšuzdevuma izpildes termiņš
+
     @Column(nullable = false)
-    private boolean completed = false;
+    private String status = "Nav sākts";
+
+    @Column(name = "order_index", nullable = false)
+    private Integer orderIndex; // Norāda secību (1, 2, 3)
+
+    @Column(name = "is_active", nullable = false)
+    private boolean active = false; // Nosaka, vai lietotājs šobrīd drīkst strādāt ar šo uzdevumu
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "parent_task_id", nullable = false)

@@ -13,10 +13,10 @@ import java.util.List;
 @Repository
 public interface TaskRepository extends JpaRepository<Task, Long> {
 
-    /**
-     * Atrod visus uzdevumus, kur norādītā persona ir atbildīgā.
-     */
-    List<Task> findAllByAssigneeOrderByDueDateAsc(String assignee);
+//    /**
+//     * Atrod visus uzdevumus, kur norādītā persona ir atbildīgā.
+//     */
+//    List<Task> findAllByAssigneeOrderByDueDateAsc(String assignee);
 
     /**
      * Atrod visus uzdevumus, kas piesaistīti konkrētai dokumenta kartītei.
@@ -29,5 +29,16 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
      */
     @Query(value = "SELECT * FROM task WHERE followers @> jsonb_build_array(:follower) ORDER BY due_date ASC", nativeQuery = true)
     List<Task> findAllByFollower(@org.springframework.data.repository.query.Param("follower") String follower);
+
+    /**
+     * Atrod visus uzdevumus, kur norādītā persona ir atbildīgā par galveno uzdevumu
+     * VAI ir atbildīgā par kādu no šī uzdevuma apakšuzdevumiem.
+     * Izmanto DISTINCT, lai novērstu dublikātus.
+     */
+    @Query(value = "SELECT DISTINCT t.* FROM task t " +
+            "LEFT JOIN sub_task st ON t.id = st.parent_task_id " +
+            "WHERE t.assignee = :assignee OR st.assignee = :assignee " +
+            "ORDER BY t.due_date ASC", nativeQuery = true)
+    List<Task> findAllTasksForUser(@org.springframework.data.repository.query.Param("assignee") String assignee);
 
 }

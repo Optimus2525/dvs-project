@@ -7,6 +7,8 @@ import lv.smiltenesnkup.dvs.task.dto.TaskDTO;
 import lv.smiltenesnkup.dvs.task.service.TaskService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import lv.smiltenesnkup.dvs.task.dto.NotificationDTO;
+import java.util.Map;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -46,6 +48,50 @@ public class TaskApiController {
                 .collect(Collectors.toList());
 
         return ResponseEntity.ok(filtered);
+    }
+
+    // ==========================================
+    // PAZIŅOJUMI (NOTIFICATIONS)
+    // ==========================================
+
+    /**
+     * Atgriež visus neizlasītos paziņojumus konkrētam lietotājam.
+     */
+    @GetMapping("/notifications")
+    public ResponseEntity<List<NotificationDTO>> getUnreadNotifications(@RequestParam String user) {
+        log.info("Tiek pieprasīti neizlasītie paziņojumi lietotājam: {}", user);
+        return ResponseEntity.ok(taskService.getUnreadNotifications(user));
+    }
+
+    /**
+     * Atzīmē paziņojumu kā izlasītu.
+     */
+    @PostMapping("/notifications/{id}/read")
+    public ResponseEntity<Void> markNotificationAsRead(@PathVariable Long id) {
+        log.info("Paziņojums ID: {} tiek atzīmēts kā izlasīts", id);
+        taskService.markNotificationAsRead(id);
+        return ResponseEntity.ok().build();
+    }
+
+    // ==========================================
+    // APAKŠUZDEVUMU STATUSI
+    // ==========================================
+
+    /**
+     * Atjaunina apakšuzdevuma statusu un izsauc darbplūsmas (Workflow) loģiku.
+     */
+    @PutMapping("/subtasks/{id}/status")
+    public ResponseEntity<Void> updateSubTaskStatus(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> payload) {
+
+        String newStatus = payload.get("status");
+        String comment = payload.get("comment");
+
+        log.info("Tiek atjaunināts apakšuzdevuma {} statuss uz {}", id, newStatus);
+        taskService.updateSubTaskStatus(id, newStatus, comment);
+
+        return ResponseEntity.ok().build();
     }
 
 }

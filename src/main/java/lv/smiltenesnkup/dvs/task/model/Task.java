@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import lv.smiltenesnkup.dvs.document.model.DocumentCard;
 import lv.smiltenesnkup.dvs.task.enums.TaskPriority;
+import lv.smiltenesnkup.dvs.task.enums.TaskType;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -63,5 +64,10 @@ public class Task {
 
     @Column(name = "created_at", insertable = false, updatable = false)
     private java.time.LocalDateTime createdAt;
+
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(name = "task_type", nullable = false)
+    private TaskType taskType = TaskType.REGULAR;
 
 }

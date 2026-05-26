@@ -9,6 +9,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lv.smiltenesnkup.dvs.task.enums.TaskPriority;
+import lv.smiltenesnkup.dvs.task.enums.TaskType;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -23,6 +24,9 @@ import java.util.List;
 public class TaskDTO {
 
     private Long id;
+
+    @NotNull(message = "Uzdevuma tips ir obligāts")
+    private TaskType taskType;
 
     @NotBlank(message = "Virsraksts ir obligāts")
     private String title;

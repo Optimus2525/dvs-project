@@ -20,4 +20,19 @@ public interface TaskService {
      */
     List<TaskDTO> getTasksForFollower(String follower);
 
+    /**
+     * Atjaunina apakšuzdevuma statusu un apstrādā darbplūsmas (Workflow) loģiku.
+     */
+    void updateSubTaskStatus(Long subTaskId, String newStatus, String comment);
+
+    /**
+     * Izgūst neizlasītos paziņojumus lietotājam.
+     */
+    List<lv.smiltenesnkup.dvs.task.dto.NotificationDTO> getUnreadNotifications(String user);
+
+    /**
+     * Atzīmē paziņojumu kā izlasītu.
+     */
+    void markNotificationAsRead(Long notificationId);
+
 }
