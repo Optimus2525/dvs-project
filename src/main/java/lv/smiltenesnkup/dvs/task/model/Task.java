@@ -39,6 +39,9 @@ public class Task {
     @Column(nullable = false)
     private String assignee; // Atbildīgā persona
 
+    @Column(name = "created_by", nullable = false)
+    private String createdBy; // Uzdevuma izveidotājs
+
     // Glabā lietotāju sarakstu (Seko līdzi) JSONB formātā, izmantojot Hypersistence Utils
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
@@ -60,6 +63,7 @@ public class Task {
     private DocumentCard documentCard;
 
     @OneToMany(mappedBy = "parentTask", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("orderIndex ASC") // Nodrošina, ka apakšuzdevumi vienmēr tiek sakārtoti pēc to kārtas numura
     private List<SubTask> subTasks;
 
     @Column(name = "created_at", insertable = false, updatable = false)

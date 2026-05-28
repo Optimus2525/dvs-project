@@ -34,6 +34,24 @@ public class TaskApiController {
     }
 
     /**
+     * Izgūst konkrēta uzdevuma datus pēc tā identifikatora.
+     */
+    @GetMapping("/{id}")
+    public ResponseEntity<TaskDTO> getTaskById(@PathVariable Long id) {
+        log.info("Tiek pieprasīti dati uzdevumam ID: {}", id);
+        return ResponseEntity.ok(taskService.getTaskById(id));
+    }
+
+    /**
+     * Atjaunina uzdevuma pamatdatus.
+     */
+    @PutMapping("/{id}")
+    public ResponseEntity<TaskDTO> updateTask(@PathVariable Long id, @Valid @RequestBody lv.smiltenesnkup.dvs.task.dto.TaskUpdateDTO updateDTO) {
+        log.info("Tiek atjaunināts uzdevums ID: {}", id);
+        return ResponseEntity.ok(taskService.updateTask(id, updateDTO));
+    }
+
+    /**
      * Imitē lietotāju meklēšanu no sistēmas (Azure AD) pēc vārda fragmenta.
      * Tiek izmantots autocompletion funkcionalitātei frontend pusē.
      */
@@ -78,18 +96,18 @@ public class TaskApiController {
     // ==========================================
 
     /**
-     * Atjaunina apakšuzdevuma statusu un izsauc darbplūsmas (Workflow) loģiku.
+     * Atjaunina apakšuzdevuma statusu un aprakstu, kā arī izsauc darbplūsmas (Workflow) loģiku.
      */
-    @PutMapping("/subtasks/{id}/status")
-    public ResponseEntity<Void> updateSubTaskStatus(
+    @PutMapping("/subtasks/{id}")
+    public ResponseEntity<Void> updateSubTask(
             @PathVariable Long id,
             @RequestBody Map<String, String> payload) {
 
         String newStatus = payload.get("status");
-        String comment = payload.get("comment");
+        String description = payload.get("description");
 
-        log.info("Tiek atjaunināts apakšuzdevuma {} statuss uz {}", id, newStatus);
-        taskService.updateSubTaskStatus(id, newStatus, comment);
+        log.info("Tiek atjaunināti dati apakšuzdevumam ID: {}", id);
+        taskService.updateSubTask(id, newStatus, description);
 
         return ResponseEntity.ok().build();
     }

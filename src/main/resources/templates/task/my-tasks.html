@@ -40,6 +40,7 @@
                             <tr>
                                 <th>Virsraksts</th>
                                 <th>Tips</th>
+                                <th>Izveidoja</th>
                                 <th>Izpildes datums</th>
                                 <th>Statuss / Apakšuzdevumi</th>
                                 <th>Termiņš</th>
@@ -47,7 +48,11 @@
                             </thead>
                             <tbody>
                             <tr th:each="task : ${assignedTasks}">
-                                <td class="w-25"><a href="#" class="text-decoration-none fw-bold text-primary" th:text="${task.title}"></a></td>
+                                <td class="w-25">
+                                    <a href="#" class="text-decoration-none fw-bold text-primary task-title-link"
+                                       th:data-id="${task.id}"
+                                       th:text="${task.title}"></a>
+                                </td>
 
                                 <!-- DROŠA TIPA PĀRBAUDE (Null-safe) -->
                                 <td>
@@ -55,6 +60,8 @@
                                     <span class="badge bg-warning text-dark" th:if="${task.taskType != null and task.taskType.name() == 'COMPLEX_SEQUENTIAL'}">Secīgs</span>
                                     <span class="badge bg-info text-dark" th:if="${task.taskType != null and task.taskType.name() == 'COMPLEX_PARALLEL'}">Paralēls</span>
                                 </td>
+
+                                <td th:text="${task.createdBy}"></td>
 
                                 <td th:text="${#temporals.format(task.dueDate, 'dd.MM.yyyy')}"></td>
 
@@ -67,16 +74,6 @@
                                         <div th:each="st : ${task.subTasks}" class="mb-1 p-1 border rounded" th:classappend="${st.active ? 'bg-light border-primary' : 'text-muted'}">
                                             <span class="fw-bold" th:text="${st.orderIndex} + '. ' + ${st.assignee}"></span> -
                                             <span th:text="${st.status}" class="fst-italic"></span>
-
-                                            <!-- Statusa maiņa TIKAI tad, ja tas ir aktīvs un pieder šim lietotājam -->
-                                            <div th:if="${st.active and st.assignee == currentUser}" class="mt-1">
-                                                <select class="form-select form-select-sm d-inline-block w-auto status-changer" th:data-id="${st.id}">
-                                                    <option value="" selected disabled>Mainīt statusu...</option>
-                                                    <option value="Notiek izpilde">Notiek izpilde</option>
-                                                    <option value="Atgriezts labošanai">Atgriezts labošanai</option>
-                                                    <option value="Pabeigts">Pabeigts</option>
-                                                </select>
-                                            </div>
                                         </div>
                                     </div>
                                 </td>
@@ -91,7 +88,7 @@
                                 </td>
                             </tr>
                             <tr th:if="${#lists.isEmpty(assignedTasks)}">
-                                <td colspan="5" class="text-center text-muted py-4">Jums šobrīd nav piešķirtu uzdevumu.</td>
+                                <td colspan="6" class="text-center text-muted py-4">Jums šobrīd nav piešķirtu uzdevumu.</td>
                             </tr>
                             </tbody>
                         </table>
@@ -119,6 +116,8 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Aizvērt"></button>
                 </div>
                 <div class="modal-body">
+                    <!-- Kļūdu paziņojumu bloks -->
+                    <div id="createTaskAlert" class="alert alert-danger d-none" role="alert"></div>
                     <form id="taskForm">
 
                         <!-- Uzdevuma tips (Pārslēdzējs) -->
@@ -184,6 +183,54 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Atcelt</button>
                     <button type="button" class="btn btn-success" id="saveTaskBtn">Saglabāt Uzdevumu</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modālais logs Uzdevuma rediģēšanai -->
+    <div class="modal fade" id="editTaskModal" tabindex="-1" aria-labelledby="editTaskModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-secondary text-white">
+                    <h5 class="modal-title" id="editTaskModalLabel">Uzdevuma Informācija</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Aizvērt"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="editTaskAlert" class="alert alert-danger d-none" role="alert"></div>
+
+                    <form id="editTaskForm">
+                        <input type="hidden" id="editTaskId">
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Virsraksts</label>
+                            <input type="text" class="form-control" id="editTaskTitle" required>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Sākuma datums</label>
+                                <input type="text" class="form-control date-input" id="editTaskStartDate" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Izpildes datums</label>
+                                <input type="text" class="form-control date-input" id="editTaskDueDate" required>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Apraksts</label>
+                            <textarea class="form-control" id="editTaskDescription" rows="3" required></textarea>
+                        </div>
+
+                        <hr>
+                        <h6 class="fw-bold">Apakšuzdevumi</h6>
+                        <div id="editSubtasksContainer" class="mt-3"></div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Aizvērt</button>
+                    <button type="button" class="btn btn-primary" id="updateTaskBtn">Saglabāt</button>
                 </div>
             </div>
         </div>
@@ -405,6 +452,7 @@
                     startDate: formatToISO(document.getElementById('taskStartDate').value),
                     dueDate: formatToISO(document.getElementById('taskDueDate').value),
                     assignee: isComplex ? currentUser : document.getElementById('taskAssignee').value,
+                    createdBy: currentUser, // Pievieno izveidotāju
                     followers: selectedFollowers,
                     description: document.getElementById('taskDescription').value,
                     priority: "NORMAL",
@@ -437,75 +485,249 @@
                     if (!response.ok) {
                         const errorData = await response.text();
                         console.error("Backend atbilde:", errorData);
-                        alert("Kļūda saglabājot! Servera atbilde: " + errorData.substring(0, 150));
+                        const alertBox = document.getElementById('createTaskAlert');
+                        alertBox.innerText = "Kļūda saglabājot! " + errorData.substring(0, 150);
+                        alertBox.classList.remove('d-none');
                         return;
                     }
 
-                    alert("Uzdevums veiksmīgi izveidots!");
                     window.location.reload();
                 } catch (err) {
-                    alert("Sistēmas kļūda: " + err.message);
+                    const alertBox = document.getElementById('createTaskAlert');
+                    alertBox.innerText = "Sistēmas kļūda: " + err.message;
+                    alertBox.classList.remove('d-none');
                 }
             });
 
-            // --- 5. STATUSA MAIŅA (WORKFLOW) ---
-            document.querySelectorAll('.status-changer').forEach(select => {
-                select.addEventListener('change', function() {
-                    const subtaskId = this.getAttribute('data-id');
-                    const newStatus = this.value;
-                    let comment = "";
+            // --- 5. UZDEVUMA REDIĢĒŠANAS LOĢIKA (RBAC UN VIENOTĀ SAGLABĀŠANA) ---
+            const editStartPicker = flatpickr("#editTaskStartDate", { locale: "lv", altInput: true, altFormat: "d.m.Y", dateFormat: "Y-m-d" });
+            const editDuePicker = flatpickr("#editTaskDueDate", { locale: "lv", altInput: true, altFormat: "d.m.Y", dateFormat: "Y-m-d" });
+            const editModal = new bootstrap.Modal(document.getElementById('editTaskModal'));
 
-                    if (newStatus === "Atgriezts labošanai") {
-                        comment = prompt("Lūdzu, norādiet atgriešanas iemeslu:");
-                        if (comment === null) {
-                            this.value = ""; // Atceļ izvēli, ja nospiež Cancel
-                            return;
+            document.querySelectorAll('.task-title-link').forEach(link => {
+                link.addEventListener('click', async function(e) {
+                    e.preventDefault();
+                    const taskId = this.getAttribute('data-id');
+                    document.getElementById('editTaskAlert').classList.add('d-none');
+
+                    try {
+                        const res = await fetch(`/api/v1/tasks/${taskId}`);
+                        const task = await res.json();
+
+                        document.getElementById('editTaskId').value = task.id;
+                        document.getElementById('editTaskTitle').value = task.title;
+                        document.getElementById('editTaskDescription').value = task.description;
+                        editStartPicker.setDate(task.startDate);
+                        editDuePicker.setDate(task.dueDate);
+
+                        // Pārbauda tiesības (RBAC) - Ja nav izveidotājs, pamatlaukus atspējo
+                        const isCreator = (task.assignee === currentUser);
+                        const mainFields = ['editTaskTitle', 'editTaskDescription', 'editTaskStartDate', 'editTaskDueDate'];
+
+                        mainFields.forEach(fieldId => {
+                            const el = document.getElementById(fieldId);
+                            if (el.classList.contains('flatpickr-input')) {
+                                el.nextElementSibling.disabled = !isCreator;
+                            } else {
+                                el.disabled = !isCreator;
+                            }
+                        });
+
+                        let hasEditableFields = isCreator;
+
+                        // Ģenerē apakšuzdevumu skatu
+                        const subContainer = document.getElementById('editSubtasksContainer');
+                        subContainer.innerHTML = '';
+
+                        if (task.subTasks && task.subTasks.length > 0) {
+                            task.subTasks.forEach(st => {
+                                const isSubtaskAssignee = (st.assignee === currentUser);
+                                const isEditable = isSubtaskAssignee && st.active;
+                                const isFirstSequential = (task.taskType === 'COMPLEX_SEQUENTIAL' && st.orderIndex === 1);
+
+                                if (isEditable) hasEditableFields = true;
+
+                                const stHtml = `
+                                    <div class="card mb-2 border-secondary subtask-card" data-id="${st.id}" data-order="${st.orderIndex}">
+                                        <div class="card-body p-2 bg-light">
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                <span class="fw-bold small">${st.orderIndex}. ${st.title} (${st.assignee})</span>
+                                                <span class="badge ${st.active ? 'bg-primary' : 'bg-secondary'}">${st.status}</span>
+                                            </div>
+                                            <textarea class="form-control form-control-sm mb-2" id="stDesc_${st.id}" ${isEditable ? '' : 'disabled'} data-original-disabled="${!isEditable}">${st.description || ''}</textarea>
+                                            ${isEditable ? `
+                                                <select class="form-select form-select-sm status-changer-modal" data-id="${st.id}">
+                                                    <option value="${st.status}" hidden>${st.status}</option>
+                                                    <option value="Notiek izpilde" ${st.status === 'Notiek izpilde' ? 'selected' : ''}>Notiek izpilde</option>
+                                                    ${!isFirstSequential ? `<option value="Atgriezts labošanai" ${st.status === 'Atgriezts labošanai' ? 'selected' : ''}>Atgriezts labošanai</option>` : ''}
+                                                    <option value="Pabeigts" ${st.status === 'Pabeigts' ? 'selected' : ''}>Pabeigts</option>
+                                                </select>
+                                            ` : ''}
+                                        </div>
+                                    </div>
+                                `;
+                                subContainer.insertAdjacentHTML('beforeend', stHtml);
+                            });
+                        } else {
+                            subContainer.innerHTML = '<span class="text-muted small">Nav apakšuzdevumu</span>';
                         }
-                    }
 
-                    fetch(`/api/v1/tasks/subtasks/${subtaskId}/status`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ status: newStatus, comment: comment })
-                    }).then(() => window.location.reload());
+                        document.getElementById('updateTaskBtn').style.display = hasEditableFields ? 'inline-block' : 'none';
+                        editModal.show();
+
+                    } catch (err) {
+                        console.error("Kļūda ielādējot uzdevumu:", err);
+                    }
                 });
             });
 
-            // --- 6. POPOVER (TOAST) PAZIŅOJUMU MEHĀNISMS ---
+            // Dinamiskā "Atgriezt labošanai" loģika bez prompt()
+            document.addEventListener('change', function(e) {
+                if (e.target && e.target.classList.contains('status-changer-modal')) {
+                    const newStatus = e.target.value;
+                    const card = e.target.closest('.subtask-card');
+                    const currentOrder = parseInt(card.getAttribute('data-order'));
+
+                    const prevCard = document.querySelector(`.subtask-card[data-order="${currentOrder - 1}"]`);
+
+                    if (prevCard) {
+                        const prevTextarea = prevCard.querySelector('textarea');
+
+                        if (newStatus === "Atgriezts labošanai") {
+                            // Aktivizē iepriekšējo textarea un pievieno norādi
+                            prevTextarea.disabled = false;
+                            if (!prevTextarea.value.includes('[Atgriešanas iemesls]:')) {
+                                prevTextarea.value += (prevTextarea.value ? '\n\n' : '') + '[Atgriešanas iemesls]: ';
+                            }
+                            prevTextarea.focus();
+                        } else {
+                            // Ja lietotājs pārdomā, atjauno sākotnējo atspējojuma stāvokli
+                            if (prevTextarea.getAttribute('data-original-disabled') === 'true') {
+                                prevTextarea.disabled = true;
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Vienotā saglabāšanas loģika visam modālajam logam
+            document.getElementById('updateTaskBtn').addEventListener('click', async function() {
+                const id = document.getElementById('editTaskId').value;
+                const requests = []; // Aizstāts no promises uz requests objektu masīvu
+
+                // 1. Tiek saglabāti pamatdati
+                if (!document.getElementById('editTaskTitle').disabled) {
+                    const payload = {
+                        title: document.getElementById('editTaskTitle').value,
+                        description: document.getElementById('editTaskDescription').value,
+                        startDate: document.getElementById('editTaskStartDate').value,
+                        dueDate: document.getElementById('editTaskDueDate').value
+                    };
+                    requests.push({ url: `/api/v1/tasks/${id}`, body: payload });
+                }
+
+                // 2. Tiek savākti apakšuzdevumu dati (statuss un/vai apraksts)
+                document.querySelectorAll('.subtask-card').forEach(card => {
+                    const stId = card.getAttribute('data-id');
+                    const select = card.querySelector('.status-changer-modal');
+                    const textarea = document.getElementById(`stDesc_${stId}`);
+
+                    let payload = {};
+                    let hasChanges = false;
+
+                    // Nolasa statusu, ja select eksistē un nav atspējots
+                    if (select && !select.disabled) {
+                        payload.status = select.value;
+                        hasChanges = true;
+                    }
+
+                    // Nolasa aprakstu, ja textarea nav atspējots
+                    if (textarea && !textarea.disabled) {
+                        payload.description = textarea.value;
+                        hasChanges = true;
+                    }
+
+                    if (hasChanges) {
+                        requests.push({ url: `/api/v1/tasks/subtasks/${stId}`, body: payload });
+                    }
+                });
+
+                if (requests.length === 0) {
+                    editModal.hide();
+                    return;
+                }
+
+                try {
+                    // Tiek sūtīti pieprasījumi secīgi (viens pēc otra), lai novērstu "Race Condition" datubāzē
+                    for (const req of requests) {
+                        const res = await fetch(req.url, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(req.body)
+                        });
+
+                        if (!res.ok) {
+                            const errorData = await res.text();
+                            throw new Error(errorData.substring(0, 150));
+                        }
+                    }
+
+                    // Pēc veiksmīgas visu pieprasījumu apstrādes lapa tiek pārlādēta
+                    window.location.reload();
+                } catch (err) {
+                    const alertBox = document.getElementById('editTaskAlert');
+                    alertBox.innerText = "Kļūda saglabājot! " + err.message;
+                    alertBox.classList.remove('d-none');
+                }
+            });
+
+            // --- 6. POPOVER (TOAST) PAZIŅOJUMU MEHĀNISMS AR POGU ---
             function fetchNotifications() {
                 fetch(`/api/v1/tasks/notifications?user=${encodeURIComponent(currentUser)}`)
                     .then(res => res.json())
                     .then(notifications => {
                         const container = document.getElementById('toastContainer');
                         notifications.forEach(notif => {
-                            // Pārbauda, vai šāds toast jau nav parādīts
                             if (!document.getElementById(`toast-${notif.id}`)) {
                                 const toastEl = document.createElement('div');
-                                toastEl.className = 'toast show border-primary shadow';
+                                toastEl.className = 'toast border-primary shadow';
                                 toastEl.id = `toast-${notif.id}`;
+                                toastEl.setAttribute('role', 'alert');
+                                toastEl.setAttribute('aria-live', 'assertive');
+                                toastEl.setAttribute('aria-atomic', 'true');
                                 toastEl.innerHTML = `
                                     <div class="toast-header bg-primary text-white">
                                         <strong class="me-auto">DVS Paziņojums</strong>
                                         <button type="button" class="btn-close btn-close-white close-toast" data-id="${notif.id}"></button>
                                     </div>
-                                    <div class="toast-body fw-bold">${notif.message}</div>
+                                    <div class="toast-body">
+                                        <div class="fw-bold mb-3">${notif.message}</div>
+                                        <div class="text-end">
+                                            <button type="button" class="btn btn-sm btn-primary read-toast-btn" data-id="${notif.id}">Esmu iepazinies</button>
+                                        </div>
+                                    </div>
                                 `;
                                 container.appendChild(toastEl);
 
-                                // Kad aizver, atzīmē kā izlasītu datubāzē
-                                toastEl.querySelector('.close-toast').addEventListener('click', function() {
+                                const bsToast = new bootstrap.Toast(toastEl, { autohide: false });
+                                bsToast.show();
+
+                                const markAsRead = function() {
                                     const id = this.getAttribute('data-id');
                                     fetch(`/api/v1/tasks/notifications/${id}/read`, { method: 'POST' });
-                                    toastEl.remove();
-                                });
+                                    bsToast.hide();
+                                    setTimeout(() => toastEl.remove(), 500);
+                                };
+
+                                toastEl.querySelector('.close-toast').addEventListener('click', markAsRead);
+                                toastEl.querySelector('.read-toast-btn').addEventListener('click', markAsRead);
                             }
                         });
                     });
             }
 
-            // Pārbauda paziņojumus ik pēc 5 (300000 ms) minūtēm
             setInterval(fetchNotifications, 300000);
-            fetchNotifications(); // Izsauc uzreiz ielādējot
+            fetchNotifications();
         });
     </script>
 </section>

@@ -1,6 +1,7 @@
 package lv.smiltenesnkup.dvs.task.service;
 
 import lv.smiltenesnkup.dvs.task.dto.TaskDTO;
+import lv.smiltenesnkup.dvs.task.dto.TaskUpdateDTO;
 
 import java.util.List;
 
@@ -10,6 +11,16 @@ import java.util.List;
 public interface TaskService {
 
     TaskDTO createTask(TaskDTO taskDTO);
+
+    /**
+     * Izgūst konkrēta uzdevuma datus.
+     */
+    TaskDTO getTaskById(Long id);
+
+    /**
+     * Atjaunina galvenā uzdevuma pamatdatus, izmantojot atjaunināšanas DTO.
+     */
+    TaskDTO updateTask(Long id, TaskUpdateDTO taskUpdateDTO);
 
     List<TaskDTO> getTasksForAssignee(String assignee);
 
@@ -21,9 +32,9 @@ public interface TaskService {
     List<TaskDTO> getTasksForFollower(String follower);
 
     /**
-     * Atjaunina apakšuzdevuma statusu un apstrādā darbplūsmas (Workflow) loģiku.
+     * Atjaunina apakšuzdevuma datus (statusu un aprakstu) un apstrādā darbplūsmas (Workflow) loģiku.
      */
-    void updateSubTaskStatus(Long subTaskId, String newStatus, String comment);
+    void updateSubTask(Long subTaskId, String newStatus, String description);
 
     /**
      * Izgūst neizlasītos paziņojumus lietotājam.

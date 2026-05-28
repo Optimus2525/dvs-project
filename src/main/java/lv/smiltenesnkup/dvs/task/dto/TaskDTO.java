@@ -40,6 +40,9 @@ public class TaskDTO {
     @NotBlank(message = "Atbildīgā persona ir obligāta")
     private String assignee;
 
+    @NotBlank(message = "Izveidotājs ir obligāts")
+    private String createdBy;
+
     private List<String> followers;
 
     @NotBlank(message = "Apraksts ir obligāts")

@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import lv.smiltenesnkup.dvs.task.dto.NotificationDTO;
 import lv.smiltenesnkup.dvs.task.dto.SubTaskDTO;
 import lv.smiltenesnkup.dvs.task.dto.TaskDTO;
+import lv.smiltenesnkup.dvs.task.dto.TaskUpdateDTO;
 import lv.smiltenesnkup.dvs.task.enums.TaskType;
 import lv.smiltenesnkup.dvs.task.mapper.NotificationMapper;
 import lv.smiltenesnkup.dvs.task.mapper.TaskMapper;
@@ -35,6 +36,33 @@ public class TaskServiceImpl implements TaskService {
     private final NotificationRepository notificationRepository;
     private final TaskMapper taskMapper;
     private final NotificationMapper notificationMapper;
+
+    @Override
+    @Transactional(readOnly = true)
+    public TaskDTO getTaskById(Long id) {
+        log.info("Tiek meklēts uzdevums ar ID: {}", id);
+        Task task = taskRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Uzdevums nav atrasts ar ID: " + id));
+        return taskMapper.toDto(task);
+    }
+
+    @Override
+    @Transactional
+    public TaskDTO updateTask(Long id, TaskUpdateDTO updateDTO) {
+        log.info("Tiek atjaunināti dati uzdevumam ar ID: {}", id);
+        Task existingTask = taskRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Uzdevums nav atrasts ar ID: " + id));
+
+        // Tiek atjaunināti tikai pamatdati (virknes un datumi)
+        existingTask.setTitle(updateDTO.getTitle());
+        existingTask.setDescription(updateDTO.getDescription());
+        existingTask.setStartDate(updateDTO.getStartDate());
+        existingTask.setDueDate(updateDTO.getDueDate());
+
+        Task savedTask = taskRepository.save(existingTask);
+        return taskMapper.toDto(savedTask);
+    }
+
 
     @Override
     @Transactional
@@ -103,12 +131,15 @@ public class TaskServiceImpl implements TaskService {
 
         Task taskEntity = taskMapper.toEntity(taskDTO);
 
-        // DROŠĪBAS LABOJUMS: Manuāli iestata taskType, jo MapStruct reizēm
-        // neatjauno ģenerēto kodu, ja pats Mapper fails netika rediģēts.
+        // DROŠĪBAS LABOJUMS: Manuāli iestata taskType un createdBy
         if (taskDTO.getTaskType() != null) {
             taskEntity.setTaskType(taskDTO.getTaskType());
         } else {
             taskEntity.setTaskType(TaskType.REGULAR);
+        }
+
+        if (taskDTO.getCreatedBy() != null) {
+            taskEntity.setCreatedBy(taskDTO.getCreatedBy());
         }
 
         // Piesaista apakšuzdevumiem galveno uzdevumu, lai Hibernate varētu izveidot relāciju
@@ -122,53 +153,56 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     @Transactional
-    public void updateSubTaskStatus(Long subTaskId, String newStatus, String comment) {
-        log.info("Tiek atjaunināts apakšuzdevums ID: {} uz statusu: {}", subTaskId, newStatus);
+    public void updateSubTask(Long subTaskId, String newStatus, String description) {
+        log.info("Tiek atjaunināti dati apakšuzdevumam ID: {}", subTaskId);
 
         SubTask currentSubTask = subTaskRepository.findById(subTaskId)
                 .orElseThrow(() -> new RuntimeException("Apakšuzdevums nav atrasts"));
 
         Task parentTask = currentSubTask.getParentTask();
 
-        // Ja pievienots komentārs (piemēram, atgriešanas iemesls), to pievieno aprakstam
-        if (comment != null && !comment.isBlank()) {
-            currentSubTask.setDescription(currentSubTask.getDescription() + "\n[Komentārs]: " + comment);
+        // Tiek atjaunināts apraksts, ja tas ir norādīts
+        if (description != null) {
+            currentSubTask.setDescription(description);
         }
 
-        currentSubTask.setStatus(newStatus);
+        // Tiek pārbaudīts, vai statuss ir mainījies, lai velti neizsauktu darbplūsmas loģiku
+        if (newStatus != null && !newStatus.equals(currentSubTask.getStatus())) {
+            currentSubTask.setStatus(newStatus);
 
-        // Darbplūsmas (Workflow) loģika secīgajam uzdevumam
-        if (parentTask.getTaskType() == TaskType.COMPLEX_SEQUENTIAL) {
+            // Darbplūsmas (Workflow) loģika secīgajam uzdevumam
+            if (parentTask.getTaskType() == TaskType.COMPLEX_SEQUENTIAL) {
 
-            // 1. GADĪJUMS: Pabeigts -> Aktivizē nākamo
-            if ("Pabeigts".equals(newStatus)) {
-                currentSubTask.setActive(false); // Šis lietotājs savu darbu beidza
+                // 1. GADĪJUMS: Pabeigts -> Aktivizē nākamo
+                if ("Pabeigts".equals(newStatus)) {
+                    currentSubTask.setActive(false); // Šis lietotājs savu darbu beidza
 
-                SubTask nextSubTask = subTaskRepository.findByParentTaskIdAndOrderIndex(parentTask.getId(), currentSubTask.getOrderIndex() + 1);
-                if (nextSubTask != null) {
-                    nextSubTask.setActive(true);
-                    nextSubTask.setStatus("Nav sākts");
-                    subTaskRepository.save(nextSubTask);
+                    SubTask nextSubTask = subTaskRepository.findByParentTaskIdAndOrderIndex(parentTask.getId(), currentSubTask.getOrderIndex() + 1);
+                    if (nextSubTask != null) {
+                        nextSubTask.setActive(true);
+                        nextSubTask.setStatus("Nav sākts");
+                        subTaskRepository.save(nextSubTask);
 
-                    createNotification(nextSubTask.getAssignee(), "Ir pienākusi Tava kārta uzdevumā: " + parentTask.getTitle(), parentTask);
+                        createNotification(nextSubTask.getAssignee(), "Ir pienākusi Tava kārta uzdevumā: " + parentTask.getTitle(), parentTask);
+                    }
+                    createNotification(parentTask.getAssignee(), currentSubTask.getAssignee() + " pabeidza savu daļu uzdevumā: " + parentTask.getTitle(), parentTask);
                 }
-                createNotification(parentTask.getAssignee(), currentSubTask.getAssignee() + " pabeidza savu daļu uzdevumā: " + parentTask.getTitle(), parentTask);
-            }
 
-            // 2. GADĪJUMS: Atgriezts labošanai -> Aktivizē iepriekšējo
-            else if ("Atgriezts labošanai".equals(newStatus)) {
-                currentSubTask.setActive(false);
-                currentSubTask.setStatus("Gaida uz citu");
+                // 2. GADĪJUMS: Atgriezts labošanai -> Aktivizē iepriekšējo
+                else if ("Atgriezts labošanai".equals(newStatus)) {
+                    currentSubTask.setActive(false);
+                    currentSubTask.setStatus("Gaida uz citu");
 
-                SubTask prevSubTask = subTaskRepository.findByParentTaskIdAndOrderIndex(parentTask.getId(), currentSubTask.getOrderIndex() - 1);
-                if (prevSubTask != null) {
-                    prevSubTask.setActive(true);
-                    prevSubTask.setStatus("Atgriezts labošanai");
-                    subTaskRepository.save(prevSubTask);
+                    SubTask prevSubTask = subTaskRepository.findByParentTaskIdAndOrderIndex(parentTask.getId(), currentSubTask.getOrderIndex() - 1);
+                    if (prevSubTask != null) {
+                        prevSubTask.setActive(true);
+                        prevSubTask.setStatus("Notiek izpilde"); // Statuss tiek nomainīts uz 'Notiek izpilde'
+                        subTaskRepository.save(prevSubTask);
 
-                    createNotification(prevSubTask.getAssignee(), "Tavs darbs tika atgriezts labošanai uzdevumā: " + parentTask.getTitle(), parentTask);
+                        createNotification(prevSubTask.getAssignee(), "Tavs darbs tika atgriezts labošanai uzdevumā: " + parentTask.getTitle(), parentTask);
+                    }
+                    createNotification(parentTask.getAssignee(), "Uzdevums atgriezts labošanai: " + parentTask.getTitle(), parentTask);
                 }
-                createNotification(parentTask.getAssignee(), "Uzdevums atgriezts labošanai: " + parentTask.getTitle(), parentTask);
             }
         }
 
