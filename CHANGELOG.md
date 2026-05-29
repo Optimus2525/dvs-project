@@ -3,6 +3,30 @@
 Visi ievērojamie šī projekta labojumi tiks dokumentēti šajā failā.
 Projekts ievēro [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-05-30
+### Pievienots
+- **Administratora Panelis:** Izveidots centralizēts administratora panelis (`/admin/dashboard`).
+- **Spring Security:** Ieviesta pagaidu *In-Memory* autentifikācija un lomu bāzēta piekļuves kontrole (RBAC) administratora maršrutu aizsardzībai.
+- **Thymeleaf Security:** Integrēta sānjoslas un navigācijas elementu dinamiska slēpšana atkarībā no lietotāja lomas.
+- **CSS Redaktors:** Ieviests UI iestatījumu redaktors (`/admin/settings`), kas ļauj administratoram dinamiski mainīt sistēmas vizuālos parametrus.
+- **Formu stili:** Pievienoti jauni CSS mainīgie (`--dvs-input-font-size`, `--dvs-input-padding`) ievades lauku formātam.
+
+### Labots
+- Novērsta Thymeleaf SpEL parsēšanas kļūda CSS blokā, ieviešot drošas `null` pārbaudes, kas ļauj ielādēt pieteikšanās un kļūdu lapas bez `GlobalControllerAdvice` iejaukšanās.
+
+## [1.3.0] - 2026-05-29
+### Pievienots
+- **Uzdevumu Rediģēšana:** Ieviests modālais logs uzdevumu detalizētai apskatei un rediģēšanai ar RBAC (izveidotāja un izpildītāja tiesību nošķiršanu).
+- **Izveidotāja lauks:** Pievienots `createdBy` lauks `Task` entītijai (Flyway V7) un tas atspoguļots lietotāja saskarnes tabulā.
+- **Darbplūsmas UX:** Ieviesta dinamiska atgriešanas iemesla pieprasīšana, automātiski aktivizējot iepriekšējā apakšuzdevuma apraksta lauku.
+- **Paziņojumi:** Uzlabots Toast paziņojumu mehānisms, integrējot pogu "Esmu iepazinies" un izmantojot Bootstrap JS API.
+
+### Labots
+- Novērsta "Race Condition" kļūda datubāzē, pārveidojot apakšuzdevumu saglabāšanu no paralēlas uz secīgu izpildi.
+- Novērsta `@NotNull` validācijas kļūda, ieviešot `TaskUpdateDTO` galvenā uzdevuma daļējai atjaunināšanai (Partial Update).
+- Pievienota `@OrderBy` anotācija `Task` entītijai, nodrošinot stingru apakšuzdevumu secību.
+- Pārlūka `alert()` un `prompt()` logi aizstāti ar vizuāliem Bootstrap Alerts blokiem.
+
 ## [1.2.0] - 2026-05-26
 ### Pievienots (Added)
 - Pilna biznesa loģika (State Machine) Kompleksajiem (Secīgiem un Paralēliem) uzdevumiem.

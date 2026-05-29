@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="lv" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/base :: layout(~{::section})}">
+<body>
+<section>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="h4 mb-1">Administratora Panelis</h2>
+            <p class="text-muted mb-0">Centralizēta DVS sistēmas konfigurācija un pārvaldība.</p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Sarakstu Pārvaldība -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card shadow-sm h-100 border-primary">
+                <div class="card-body text-center py-4">
+                    <h5 class="card-title fw-bold text-primary mb-3">Sarakstu Pārvaldība</h5>
+                    <p class="card-text text-muted mb-4">
+                        Pārvaldiet dokumentu reģistrus, veidojiet jaunus sarakstus un definējiet to dinamiskos metadatu laukus.
+                    </p>
+                    <a href="/admin/lists" class="btn btn-outline-primary w-100">Pārvaldīt Sarakstus</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Vizuālie Iestatījumi -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card shadow-sm h-100 border-success">
+                <div class="card-body text-center py-4">
+                    <h5 class="card-title fw-bold text-success mb-3">Vizuālie Iestatījumi</h5>
+                    <p class="card-text text-muted mb-4">
+                        Pielāgojiet sistēmas izskatu (CSS). Mainiet burtu izmērus, atstarpes un sistēmas kompaktumu.
+                    </p>
+                    <a href="/admin/settings" class="btn btn-outline-success w-100">Atvērt Iestatījumus</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Kalendāra Kategorijas (Nākotnes funkcionalitāte) -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card shadow-sm h-100 bg-light border-secondary">
+                <div class="card-body text-center py-4 opacity-75">
+                    <h5 class="card-title fw-bold text-secondary mb-3">Kalendāra Kategorijas</h5>
+                    <p class="card-text text-muted mb-4">
+                        Pārvaldiet kalendāra notikumu tipus (Atvaļinājumi, Sapulces) un piešķiriet tiem unikālas krāsas.
+                    </p>
+                    <button class="btn btn-secondary w-100" disabled>Drīzumā...</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lietotāju Lomu Pārvaldība (Nākotnes funkcionalitāte) -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card shadow-sm h-100 bg-light border-secondary">
+                <div class="card-body text-center py-4 opacity-75">
+                    <h5 class="card-title fw-bold text-secondary mb-3">Lietotāju Tiesības (RBAC)</h5>
+                    <p class="card-text text-muted mb-4">
+                        Sasaiste ar Microsoft Entra ID (Azure AD). Pārvaldiet, kuras lietotāju grupas var piekļūt konkrētiem sarakstiem.
+                    </p>
+                    <button class="btn btn-secondary w-100" disabled>Drīzumā...</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</section>
+</body>
+</html>

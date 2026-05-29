@@ -27,4 +27,19 @@ public class UiSettingService {
                 .collect(Collectors.toMap(UiSetting::getSettingKey, UiSetting::getSettingValue));
     }
 
+    /**
+     * Atjaunina norādītos vizuālos iestatījumus datubāzē. Ja tāds iestatījums vēl neeksistē, tas tiek izveidots.
+     */
+    @Transactional
+    public void updateSettings(Map<String, String> updatedSettings) {
+        updatedSettings.forEach((key, value) -> {
+            // Atrod esošo iestatījumu vai izveido jaunu, ja tas datubāzē neeksistē
+            UiSetting setting = uiSettingRepository.findById(key)
+                    .orElse(UiSetting.builder().settingKey(key).build());
+
+            setting.setSettingValue(value);
+            uiSettingRepository.save(setting);
+        });
+    }
+
 }

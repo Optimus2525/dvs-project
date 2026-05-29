@@ -1,5 +1,7 @@
 <!DOCTYPE html>
-<html lang="lv" xmlns:th="http://www.thymeleaf.org" th:fragment="layout(content)">
+<html lang="lv" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:fragment="layout(content)">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,20 +14,32 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 
     <!-- Dinamiski injicēti CSS mainīgie no Administratora paneļa -->
-    <style th:inline="css">
+    <!-- Dinamiski injicēti CSS mainīgie no Administratora paneļa -->
+    <style th:inline="text">
         :root {
-            --dvs-font-size: [[${uiSettings['--dvs-font-size'] ?: '16px'}]];
-            --dvs-card-padding: [[${uiSettings['--dvs-card-padding'] ?: '1rem'}]];
-            --dvs-table-padding: [[${uiSettings['--dvs-table-padding'] ?: '0.5rem'}]];
+            --dvs-font-size: [(${uiSettings != null and uiSettings.get('--dvs-font-size') != null ? uiSettings.get('--dvs-font-size') : '16px'})];
+            --dvs-card-padding: [(${uiSettings != null and uiSettings.get('--dvs-card-padding') != null ? uiSettings.get('--dvs-card-padding') : '1rem'})];
+            --dvs-table-padding: [(${uiSettings != null and uiSettings.get('--dvs-table-padding') != null ? uiSettings.get('--dvs-table-padding') : '0.5rem'})];
+            --dvs-input-font-size: [(${uiSettings != null and uiSettings.get('--dvs-input-font-size') != null ? uiSettings.get('--dvs-input-font-size') : '1rem'})];
+            --dvs-input-padding: [(${uiSettings != null and uiSettings.get('--dvs-input-padding') != null ? uiSettings.get('--dvs-input-padding') : '0.375rem 0.75rem'})];
         }
+
         body {
-            font-size: var(--dvs-font-size);
+            font-size: var(--dvs-font-size) !important;
         }
+
         .card-body {
-            padding: var(--dvs-card-padding);
+            padding: var(--dvs-card-padding) !important;
         }
+
         .table > :not(caption) > * > * {
-            padding: var(--dvs-table-padding);
+            padding: var(--dvs-table-padding) !important;
+        }
+
+        /* Piesaista jaunos mainīgos visiem ievades laukiem un izvēlnēm */
+        .form-control, .form-select {
+            font-size: var(--dvs-input-font-size) !important;
+            padding: var(--dvs-input-padding) !important;
         }
     </style>
 </head>
@@ -35,10 +49,22 @@
 <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
     <div class="container-fluid">
         <a class="navbar-brand" href="/documents/dashboard">DVS Sistēma</a>
-        <div class="d-flex">
-                <span class="navbar-text text-white">
-                    Sveiki, Lietotāj!
-                </span>
+
+        <!-- Autentifikācijas bloks -->
+        <div class="d-flex align-items-center">
+            <!-- Ja lietotājs IR pieteicies -->
+            <span class="navbar-text text-white me-3" sec:authorize="isAuthenticated()">
+                Sveiki, <strong sec:authentication="name"></strong>!
+            </span>
+            <form sec:authorize="isAuthenticated()" th:action="@{/logout}" method="post" class="m-0">
+                <button type="submit" class="btn btn-sm btn-outline-light">Iziet</button>
+            </form>
+
+            <!-- Ja lietotājs NAV pieteicies -->
+            <span class="navbar-text text-white me-3" sec:authorize="!isAuthenticated()">
+                Sveiki, Viesi!
+            </span>
+            <a sec:authorize="!isAuthenticated()" href="/login" class="btn btn-sm btn-light">Ienākt sistēmā</a>
         </div>
     </div>
 </nav>
@@ -57,13 +83,25 @@
                 </ul>
             </div>
             <!-- Esošais bloks: Dokumentu Saraksti -->
-            <div class="card shadow-sm">
+            <div class="card shadow-sm mb-3">
                 <div class="card-header bg-white fw-bold">
                     Dokumentu Saraksti
                 </div>
                 <ul class="list-group list-group-flush">
                     <li class="list-group-item"><a href="#" class="text-decoration-none text-dark">Ienākošie 2026</a></li>
                     <li class="list-group-item"><a href="#" class="text-decoration-none text-dark">Rīkojumi</a></li>
+                </ul>
+            </div>
+
+            <!-- Jauns bloks: Administratora Panelis (Redzams TIKAI administratoriem) -->
+            <div class="card shadow-sm border-danger" sec:authorize="hasRole('ADMIN')">
+                <div class="card-header bg-danger text-white fw-bold">
+                    Administrēšana
+                </div>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item"><a href="/admin/dashboard" class="text-decoration-none text-dark">Galvenais panelis</a></li>
+                    <li class="list-group-item"><a href="/admin/lists" class="text-decoration-none text-dark">Sarakstu pārvaldība</a></li>
+                    <li class="list-group-item"><a href="/admin/settings" class="text-decoration-none text-dark">Sistēmas iestatījumi</a></li>
                 </ul>
             </div>
         </div>

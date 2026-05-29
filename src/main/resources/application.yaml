@@ -1,5 +1,5 @@
 app:
-  version: 1.2.0
+  version: 1.4.0
 
 server:
   port: 8095

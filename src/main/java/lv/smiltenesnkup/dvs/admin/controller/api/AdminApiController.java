@@ -11,10 +11,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import lv.smiltenesnkup.dvs.admin.dto.UiSettingsUpdateRequestDTO;
+import lv.smiltenesnkup.dvs.admin.service.UiSettingService;
+import org.springframework.web.bind.annotation.PutMapping;
 
-/**
- * REST kontrolieris administratora darbībām (sarakstu pārvaldībai).
- */
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/admin")
@@ -22,6 +22,17 @@ import org.springframework.web.bind.annotation.RestController;
 public class AdminApiController {
 
     private final DocumentListService documentListService;
+    private final UiSettingService uiSettingService;
+
+    /**
+     * Atjaunina sistēmas vizuālos (CSS) iestatījumus.
+     */
+    @PutMapping("/settings/ui")
+    public ResponseEntity<Void> updateUiSettings(@Valid @RequestBody UiSettingsUpdateRequestDTO requestDTO) {
+        log.info("REST pieprasījums vizuālo iestatījumu atjaunināšanai");
+        uiSettingService.updateSettings(requestDTO.getSettings());
+        return ResponseEntity.ok().build();
+    }
 
     /**
      * Apstrādā pieprasījumu jauna saraksta un tā lauku izveidei.
