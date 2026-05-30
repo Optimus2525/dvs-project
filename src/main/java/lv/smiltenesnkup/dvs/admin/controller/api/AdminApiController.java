@@ -4,16 +4,14 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import lv.smiltenesnkup.dvs.admin.dto.DocumentListCreateRequestDTO;
+import lv.smiltenesnkup.dvs.calendar.dto.CalendarCategoryDTO;
+import lv.smiltenesnkup.dvs.calendar.service.CalendarService;
 import lv.smiltenesnkup.dvs.document.dto.DocumentListDTO;
 import lv.smiltenesnkup.dvs.document.service.DocumentListService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import lv.smiltenesnkup.dvs.admin.dto.UiSettingsUpdateRequestDTO;
 import lv.smiltenesnkup.dvs.admin.service.UiSettingService;
-import org.springframework.web.bind.annotation.PutMapping;
 
 @Slf4j
 @RestController
@@ -23,6 +21,34 @@ public class AdminApiController {
 
     private final DocumentListService documentListService;
     private final UiSettingService uiSettingService;
+    private final CalendarService calendarService;
+
+    // --- KALENDĀRA KATEGORIJAS ---
+
+    @GetMapping("/calendar-categories")
+    public ResponseEntity<java.util.List<CalendarCategoryDTO>> getAllCategories() {
+        return ResponseEntity.ok(calendarService.getAllCategories());
+    }
+
+
+    @PostMapping("/calendar-categories")
+    public ResponseEntity<CalendarCategoryDTO> createCategory(@Valid @RequestBody CalendarCategoryDTO dto) {
+        return ResponseEntity.ok(calendarService.createCategory(dto));
+    }
+
+
+    @PutMapping("/calendar-categories/{id}")
+    public ResponseEntity<CalendarCategoryDTO> updateCategory(@PathVariable Long id, @Valid @RequestBody CalendarCategoryDTO dto) {
+        return ResponseEntity.ok(calendarService.updateCategory(id, dto));
+    }
+
+
+    @DeleteMapping("/calendar-categories/{id}")
+    public ResponseEntity<Void> deleteCategory(@PathVariable Long id) {
+        calendarService.deleteCategory(id);
+        return ResponseEntity.ok().build();
+    }
+
 
     /**
      * Atjaunina sistēmas vizuālos (CSS) iestatījumus.
@@ -33,6 +59,7 @@ public class AdminApiController {
         uiSettingService.updateSettings(requestDTO.getSettings());
         return ResponseEntity.ok().build();
     }
+
 
     /**
      * Apstrādā pieprasījumu jauna saraksta un tā lauku izveidei.

@@ -49,4 +49,12 @@ public class AdminWebController {
         return "admin/settings";
     }
 
+
+    @GetMapping("/calendar-categories")
+    public String showCalendarCategories(Model model) {
+        log.info("Tiek atvērts administratora kalendāra kategoriju skats");
+        model.addAttribute("pageTitle", "Kalendāra Kategorijas - DVS Admin");
+        return "admin/calendar-categories";
+    }
+
 }

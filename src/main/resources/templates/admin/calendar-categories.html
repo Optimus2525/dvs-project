@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="lv" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/base :: layout(~{::section})}">
+<body>
+<section>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="h4 mb-1">Kalendāra Kategorijas</h2>
+            <p class="text-muted mb-0">Pārvaldiet kalendāra notikumu tipus un to vizuālās krāsas.</p>
+        </div>
+        <button class="btn btn-primary" onclick="openCategoryModal()">+ Jauna Kategorija</button>
+    </div>
+
+    <div class="card shadow-sm border-info">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">Nosaukums</th>
+                        <th>Krāsa</th>
+                        <th>Statuss</th>
+                        <th class="text-end pe-4">Darbības</th>
+                    </tr>
+                    </thead>
+                    <tbody id="categoriesTableBody">
+                    <!-- Dati tiks ģenerēti dinamiski ar JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modālais logs (Pievienot/Rediģēt) -->
+    <div class="modal fade" id="categoryModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title fw-bold" id="modalTitle">Kategorijas Dati</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Aizvērt"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="categoryForm">
+                        <input type="hidden" id="catId">
+                        <div id="catAlert" class="alert alert-danger d-none"></div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Nosaukums <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="catName" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Krāsa <span class="text-danger">*</span></label>
+                            <div class="d-flex align-items-center gap-3">
+                                <!-- HTML5 iebūvētais krāsu atlasītājs -->
+                                <input type="color" class="form-control form-control-color" id="catColor" value="#0d6efd" required>
+                                <span class="text-muted small">Noklikšķiniet uz krāsas, lai to mainītu</span>
+                            </div>
+                        </div>
+
+                        <div class="form-check form-switch mb-3" id="activeSwitchContainer">
+                            <input class="form-check-input" type="checkbox" id="catActive" checked>
+                            <label class="form-check-label fw-bold" for="catActive">Aktīva (Redzama kalendārā)</label>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Atcelt</button>
+                    <button type="button" class="btn btn-primary" id="saveCatBtn">Saglabāt</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const tbody = document.getElementById('categoriesTableBody');
+            const modal = new bootstrap.Modal(document.getElementById('categoryModal'));
+            let currentCategories = [];
+
+            // 1. Ielādē datus no API
+            async function loadCategories() {
+                try {
+                    const res = await fetch('/api/v1/admin/calendar-categories');
+                    if (res.ok) {
+                        currentCategories = await res.json();
+                        renderTable();
+                    }
+                } catch (err) {
+                    console.error("Kļūda ielādējot kategorijas:", err);
+                }
+            }
+
+            // 2. Zīmē tabulu (aizsardzība pret XSS izmantojot textContent)
+            function renderTable() {
+                tbody.innerHTML = '';
+                currentCategories.forEach(cat => {
+                    const tr = document.createElement('tr');
+
+                    // Nosaukums
+                    const tdName = document.createElement('td');
+                    tdName.className = 'ps-4 fw-bold';
+                    tdName.textContent = cat.name;
+                    tr.appendChild(tdName);
+
+                    // Krāsa
+                    const tdColor = document.createElement('td');
+                    tdColor.innerHTML = `<span class="badge rounded-pill text-dark border" style="background-color: ${cat.colorCode};">${cat.colorCode}</span>`;
+                    tr.appendChild(tdColor);
+
+                    // Statuss
+                    const tdStatus = document.createElement('td');
+                    tdStatus.innerHTML = cat.active ? '<span class="badge bg-success">Aktīva</span>' : '<span class="badge bg-secondary">Neaktīva</span>';
+                    tr.appendChild(tdStatus);
+
+                    // Darbības
+                    const tdActions = document.createElement('td');
+                    tdActions.className = 'text-end pe-4';
+
+                    const editBtn = document.createElement('button');
+                    editBtn.className = 'btn btn-sm btn-outline-primary me-2';
+                    editBtn.textContent = 'Rediģēt';
+                    editBtn.onclick = () => openCategoryModal(cat);
+
+                    const delBtn = document.createElement('button');
+                    delBtn.className = 'btn btn-sm btn-outline-danger';
+                    delBtn.textContent = 'Dzēst';
+                    delBtn.onclick = () => deleteCategory(cat.id, cat.name);
+
+                    tdActions.appendChild(editBtn);
+                    tdActions.appendChild(delBtn);
+                    tr.appendChild(tdActions);
+
+                    tbody.appendChild(tr);
+                });
+            }
+
+            // 3. Atver modālo logu
+            window.openCategoryModal = function(cat = null) {
+                document.getElementById('categoryForm').reset();
+                document.getElementById('catAlert').classList.add('d-none');
+
+                if (cat) {
+                    document.getElementById('modalTitle').innerText = 'Rediģēt Kategoriju';
+                    document.getElementById('catId').value = cat.id;
+                    document.getElementById('catName').value = cat.name;
+                    document.getElementById('catColor').value = cat.colorCode;
+                    document.getElementById('catActive').checked = cat.active;
+                    document.getElementById('activeSwitchContainer').style.display = 'block';
+                } else {
+                    document.getElementById('modalTitle').innerText = 'Jauna Kategorija';
+                    document.getElementById('catId').value = '';
+                    document.getElementById('catColor').value = '#0d6efd';
+                    document.getElementById('catActive').checked = true;
+                    document.getElementById('activeSwitchContainer').style.display = 'none'; // Jaunai kategorijai slēpjam slēdzi
+                }
+                modal.show();
+            };
+
+            // 4. Saglabā datus (POST / PUT)
+            document.getElementById('saveCatBtn').addEventListener('click', async function() {
+                const form = document.getElementById('categoryForm');
+                if (!form.checkValidity()) {
+                    form.reportValidity();
+                    return;
+                }
+
+                const id = document.getElementById('catId').value;
+                const payload = {
+                    name: document.getElementById('catName').value,
+                    colorCode: document.getElementById('catColor').value,
+                    active: document.getElementById('catActive').checked
+                };
+
+                const url = id ? `/api/v1/admin/calendar-categories/${id}` : '/api/v1/admin/calendar-categories';
+                const method = id ? 'PUT' : 'POST';
+
+                try {
+                    const res = await fetch(url, {
+                        method: method,
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!res.ok) throw new Error("Neizdevās saglabāt kategoriju.");
+
+                    modal.hide();
+                    loadCategories();
+                } catch (err) {
+                    const alertBox = document.getElementById('catAlert');
+                    alertBox.innerText = err.message;
+                    alertBox.classList.remove('d-none');
+                }
+            });
+
+            // 5. Dzēš datus
+            window.deleteCategory = async function(id, name) {
+                if (confirm(`Vai tiešām vēlaties dzēst kategoriju "${name}"? \nUzmanību: Visi kalendāra notikumi ar šo kategoriju paliks bez krāsas.`)) {
+                    try {
+                        const res = await fetch(`/api/v1/admin/calendar-categories/${id}`, { method: 'DELETE' });
+                        if (res.ok) {
+                            loadCategories();
+                        } else {
+                            alert("Kļūda dzēšot kategoriju.");
+                        }
+                    } catch (err) {
+                        console.error(err);
+                    }
+                }
+            };
+
+            // Sākotnējā ielāde
+            loadCategories();
+        });
+    </script>
+</section>
+</body>
+</html>

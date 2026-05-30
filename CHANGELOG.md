@@ -3,6 +3,28 @@
 Visi ievērojamie šī projekta labojumi tiks dokumentēti šajā failā.
 Projekts ievēro [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-05-30
+
+### Pievienots (Added)
+* **Kalendāra modulis (Frontend):** Izstrādāts moderns kalendāra skats, izmantojot CSS Grid.
+    * Ieviesti trīs skati: Diena, Nedēļa (noklusējums) un Mēnesis.
+    * Dienas skatā realizēts proporcionāls notikumu izkārtojums (absolūtā pozicionēšana) laika skalā no 07:00 līdz 18:00.
+    * Pievienota integrācija ar Flatpickr (24h formāts, nedēļa sākas ar Pirmdienu, dinamiska laika izvēles slēpšana "Visas dienas" notikumiem).
+    * Pievienoti Bootstrap Popovers ar detalizētu informāciju par notikumiem.
+    * Pievienotas vizuālas SVG ikonas (Pulkstenis un Kalendārs) notikumu atpazīstamībai.
+* **Kalendāra modulis (Backend):** Izveidoti REST kontrolieri, servisi un repozitoriji pilnam CRUD ciklam.
+    * Pievienota stingra datumu validācija (beigu laiks nevar būt pirms sākuma laika).
+    * Izveidots `CalendarServiceImplTest` biznesa loģikas un Partial Update pārbaudei.
+* **Administratora panelis:** Izveidots jauns skats Kalendāra kategoriju pārvaldīšanai ar HTML5 krāsu atlasītāju.
+* **SharePoint Integrācijas Bāze:** Izveidots `SharePointGraphService` ar iebūvētu `Retry-After` loģiku HTTP 429 (Too Many Requests) kļūdu apstrādei.
+* **Caching:** Pievienota un konfigurēta `ConcurrentMapCacheManager` kešatmiņa kalendāra kategorijām ar automātisku `@CacheEvict` pie izmaiņām.
+* **Datubāze:** Izveidots Flyway migrācijas skripts `V8__calendar_module_init.sql`.
+
+### Izlabots (Fixed)
+* Novērsta problēma, kur DTO lauku trūkuma dēļ netika saglabātas izmaiņas kalendāra notikumu virsrakstos un aprakstos.
+* Novērsta pārlūkprogrammas kešatmiņas (Cache) problēma kalendāra notikumu ielādē, pievienojot unikālu laika zīmogu un `no-cache` hederus Fetch API pieprasījumiem.
+* Novērsta UI nobīde kalendāra šūnās (nodrošināts `padding-bottom`, lai `+` poga nepārklātu notikumus).
+
 ## [1.4.0] - 2026-05-30
 ### Pievienots
 - **Administratora Panelis:** Izveidots centralizēts administratora panelis (`/admin/dashboard`).

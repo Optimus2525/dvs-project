@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="lv" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/base :: layout(~{::section})}">
+<body>
+<section>
+    <style>
+        .calendar-wrapper {
+            background-color: #fff;
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+            overflow: hidden;
+        }
+
+        .calendar-header-row {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .calendar-header-cell {
+            padding: 0.5rem;
+            text-align: left;
+            font-weight: bold;
+            border-right: 1px dotted #dee2e6;
+        }
+        .calendar-header-cell:last-child { border-right: none; }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            grid-auto-rows: minmax(120px, auto);
+            background-color: #dee2e6;
+            gap: 1px;
+        }
+
+        .calendar-cell {
+            background-color: #fff;
+            padding: 0.25rem;
+            padding-bottom: 2rem;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            transition: background-color 0.2s;
+        }
+        .calendar-cell:hover { background-color: #fcfcfc; }
+        .calendar-cell.today { background-color: #f0f7ff; }
+
+        .calendar-date {
+            font-weight: bold;
+            margin-bottom: 0.25rem;
+            padding-left: 0.25rem;
+        }
+        .calendar-date.weekend { color: #dc3545; }
+
+        .add-event-btn {
+            position: absolute;
+            bottom: 5px;
+            right: 8px;
+            color: #28a745;
+            font-weight: bold;
+            font-size: 1.2rem;
+            cursor: pointer;
+            text-decoration: none;
+            opacity: 0.5;
+            line-height: 1;
+        }
+        .calendar-cell:hover .add-event-btn { opacity: 1; }
+
+        .calendar-event {
+            font-size: 0.85rem;
+            padding: 0.15rem 0.4rem;
+            margin-bottom: 0.2rem;
+            border-radius: 0.2rem;
+            cursor: pointer;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: #212529;
+            border-left: 3px solid rgba(0,0,0,0.2);
+        }
+        .calendar-event:hover { filter: brightness(0.95); }
+
+        /* --- JAUNIE DIENAS SKATA STILI (PROPORCIONĀLAIS GRID) --- */
+        .calendar-wrapper.day-view-mode .calendar-header-row { display: none; }
+        .calendar-wrapper.day-view-mode .calendar-grid { display: block; background-color: #fff; }
+
+        .day-view-all-day {
+            padding: 0.5rem;
+            background-color: #fff;
+            border-bottom: 3px solid #dee2e6;
+        }
+
+        .day-view-container {
+            display: flex;
+            background-color: #fff;
+            min-height: 720px; /* 12 stundas * 60px */
+        }
+
+        .day-view-time-labels {
+            width: 70px;
+            background-color: #f8f9fa;
+            border-right: 1px solid #dee2e6;
+        }
+
+        .day-view-time-label {
+            height: 60px; /* 1 stunda = 60px */
+            text-align: right;
+            padding-right: 0.5rem;
+            padding-top: 0.5rem;
+            font-size: 0.85rem;
+            color: #6c757d;
+            font-weight: bold;
+            box-sizing: border-box;
+        }
+
+        .day-view-grid-absolute {
+            flex-grow: 1;
+            position: relative;
+            /* Ģenerē fona līnijas katrai stundai (ik pēc 60px) */
+            background-image: linear-gradient(to bottom, #dee2e6 1px, transparent 1px);
+            background-size: 100% 60px;
+        }
+
+        .day-view-click-area {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 1;
+            cursor: pointer;
+        }
+        .day-view-click-area:hover {
+            background-color: rgba(0,0,0,0.02);
+        }
+
+        .day-absolute-event {
+            position: absolute;
+            left: 10px;
+            right: 20px;
+            border-radius: 4px;
+            border-left: 4px solid rgba(0,0,0,0.3);
+            padding: 0.25rem 0.5rem;
+            font-size: 0.85rem;
+            line-height: 1.2;
+            overflow: hidden;
+            white-space: normal; /* Ļauj tekstam lūzt jaunā rindā, ja notikums ir garš */
+            color: #212529;
+            z-index: 10;
+            opacity: 0.95;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: filter 0.2s, z-index 0.2s;
+        }
+        .day-absolute-event:hover {
+            filter: brightness(0.9);
+            z-index: 20;
+        }
+    </style>
+
+    <!-- Kalendāra Augšējā Navigācija -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <!-- Kreisā puse: Virsraksts -->
+        <h2 class="h3 mb-0 fw-bold" id="currentMonthLabel" style="min-width: 200px;">Jūnijs, 2026</h2>
+
+        <!-- Centrs: Skatu saites ar SVG -->
+        <div class="d-flex gap-4">
+            <a href="#" class="text-decoration-none text-muted view-link d-flex align-items-center" data-view="day">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="me-1" viewBox="0 0 16 16"><path d="M11 6.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1z"/><path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4H1z"/></svg>
+                Diena
+            </a>
+            <a href="#" class="text-decoration-none text-primary fw-bold view-link d-flex align-items-center" data-view="week">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="me-1" viewBox="0 0 16 16"><path d="M11 6.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1zm-3 0a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1zm-5 3a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1zm3 0a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1z"/><path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4H1z"/></svg>
+                Nedēļa
+            </a>
+            <a href="#" class="text-decoration-none text-muted view-link d-flex align-items-center" data-view="month">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="me-1" viewBox="0 0 16 16"><path d="M2.56 11.332 3.1 9.73h1.984l.54 1.602h.718L4.444 6h-.696L1.85 11.332h.71zm1.544-4.527L4.9 9.18H3.284l.82-2.375h.001zm5.746.422h-.676V9.77c0 .652-.414 1.023-1.004 1.023-.539 0-.98-.346-.98-1.005V7.227h-.679v2.667c0 1.12.63 1.756 1.68 1.756 1.037 0 1.657-.615 1.657-1.75V7.227zm3.14 0h-.67v2.668c0 .652-.414 1.023-1.004 1.023-.539 0-.98-.346-.98-1.005V7.227h-.68v2.667c0 1.12.63 1.756 1.68 1.756 1.037 0 1.657-.615 1.657-1.75V7.227z"/><path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4H1z"/></svg>
+                Mēnesis
+            </a>
+        </div>
+
+        <!-- Labā puse: Navigācijas pogas -->
+        <div class="d-flex align-items-center gap-2" style="min-width: 200px; justify-content: flex-end;">
+            <button class="btn btn-outline-secondary btn-sm" id="prevMonthBtn" title="Iepriekšējais">&larr;</button>
+            <button class="btn btn-outline-secondary btn-sm" id="todayBtn">Šodien</button>
+            <button class="btn btn-outline-secondary btn-sm" id="nextMonthBtn" title="Nākamais">&rarr;</button>
+        </div>
+    </div>
+
+    <!-- Kalendāra Grid / Dienas skats -->
+    <div class="calendar-wrapper shadow-sm mb-4" id="calendarWrapper">
+        <div class="calendar-header-row text-muted">
+            <div class="calendar-header-cell">Pirmdiena</div>
+            <div class="calendar-header-cell">Otrdiena</div>
+            <div class="calendar-header-cell">Trešdiena</div>
+            <div class="calendar-header-cell">Ceturtdiena</div>
+            <div class="calendar-header-cell">Piektdiena</div>
+            <div class="calendar-header-cell text-danger">Sestdiena</div>
+            <div class="calendar-header-cell text-danger">Svētdiena</div>
+        </div>
+        <div class="calendar-grid" id="calendarGrid">
+            <!-- Šūnas tiks ģenerētas ar JavaScript -->
+        </div>
+    </div>
+
+    <!-- Modālais logs jauna/esoša notikuma pievienošanai -->
+    <div class="modal fade" id="eventModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title fw-bold" id="eventModalTitle">Jauns Notikums</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Aizvērt"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="eventForm">
+                        <input type="hidden" id="eventId">
+                        <div id="eventAlert" class="alert alert-danger d-none"></div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Virsraksts <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="eventTitle" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Kategorija <span class="text-danger">*</span></label>
+                            <select class="form-select" id="eventCategory" required>
+                                <option value="">-- Izvēlieties --</option>
+                                <option th:each="cat : ${categories}" th:value="${cat.id}" th:text="${cat.name}"></option>
+                            </select>
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="eventAllDay">
+                            <label class="form-check-label fw-bold" for="eventAllDay">Visas dienas notikums</label>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Sākums <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="eventStart" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Beigas <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="eventEnd" required>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Apraksts</label>
+                            <textarea class="form-control" id="eventDesc" rows="3"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Atcelt</button>
+                    <button type="button" class="btn btn-primary" id="saveEventBtn">Saglabāt</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const calendarWrapper = document.getElementById('calendarWrapper');
+            const calendarGrid = document.getElementById('calendarGrid');
+            const currentMonthLabel = document.getElementById('currentMonthLabel');
+            const eventModal = new bootstrap.Modal(document.getElementById('eventModal'));
+
+            const monthNames = ["Janvāris", "Februāris", "Marts", "Aprīlis", "Maijs", "Jūnijs", "Jūlijs", "Augusts", "Septembris", "Oktobris", "Novembris", "Decembris"];
+
+            let currentDate = new Date();
+            let events = [];
+            let currentView = 'week';
+
+            let fpStart, fpEnd;
+
+            // --- SKATU PĀRSLĒDZĒJS ---
+            document.querySelectorAll('.view-link').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+
+                    // Noņem aktīvo stilu no visām saitēm
+                    document.querySelectorAll('.view-link').forEach(l => {
+                        l.classList.remove('text-primary', 'fw-bold');
+                        l.classList.add('text-muted');
+                    });
+
+                    // Pievieno aktīvo stilu noklikšķinātajai saitei
+                    e.currentTarget.classList.remove('text-muted');
+                    e.currentTarget.classList.add('text-primary', 'fw-bold');
+
+                    // Nomaina skatu un pārzīmē kalendāru
+                    currentView = e.currentTarget.getAttribute('data-view');
+                    renderCalendar();
+                });
+            });
+
+            function initFlatpickr(enableTime) {
+                if (fpStart) fpStart.destroy();
+                if (fpEnd) fpEnd.destroy();
+                const fpConfig = {
+                    locale: "lv", enableTime: enableTime, time_24hr: true,
+                    altInput: true, altFormat: enableTime ? "d.m.Y H:i" : "d.m.Y",
+                    dateFormat: enableTime ? "Y-m-d\\TH:i" : "Y-m-d", firstDayOfWeek: 1
+                };
+                fpStart = flatpickr("#eventStart", fpConfig);
+                fpEnd = flatpickr("#eventEnd", fpConfig);
+            }
+
+            document.getElementById('eventAllDay').addEventListener('change', function() {
+                const sVal = document.getElementById('eventStart').value;
+                const eVal = document.getElementById('eventEnd').value;
+                initFlatpickr(!this.checked);
+                if (sVal) fpStart.setDate(sVal);
+                if (eVal) fpEnd.setDate(eVal);
+            });
+
+            function formatPopoverDate(startStr, endStr, isAllDay) {
+                const s = new Date(startStr);
+                const e = new Date(endStr);
+                const pad = (n) => n.toString().padStart(2, '0');
+                const sDate = `${pad(s.getDate())}.${pad(s.getMonth()+1)}.`;
+                const eDate = `${pad(e.getDate())}.${pad(e.getMonth()+1)}.`;
+                const sTime = `${pad(s.getHours())}:${pad(s.getMinutes())}`;
+                const eTime = `${pad(e.getHours())}:${pad(e.getMinutes())}`;
+                if (isAllDay) return (sDate === eDate) ? sDate : `${sDate} - ${eDate}`;
+                else return (sDate === eDate) ? `${sDate} ${sTime} - ${eTime}` : `${sDate} ${sTime} - ${eDate} ${eTime}`;
+            }
+
+            // Universāla funkcija notikuma elementa izveidei (atbalsta visus skatus)
+            function createEventElement(e, mode = 'default') {
+                const eventDiv = document.createElement('div');
+                eventDiv.style.backgroundColor = e.categoryColor;
+
+                const iconSpan = document.createElement('span');
+                iconSpan.className = 'me-1 opacity-75';
+
+                if (e.allDay) {
+                    iconSpan.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" fill="currentColor" viewBox="0 0 16 16" style="vertical-align: -0.125em;"><path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4H1z"/></svg>`;
+                } else {
+                    iconSpan.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" fill="currentColor" viewBox="0 0 16 16" style="vertical-align: -0.125em;"><path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z"/><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z"/></svg>`;
+                }
+
+                eventDiv.appendChild(iconSpan);
+
+                // Ja tas ir dienas skats un notikumam ir laiks, pievienojam laiku virsrakstam
+                if (mode === 'day-timed' && !e.allDay) {
+                    eventDiv.className = 'day-absolute-event'; // Izmanto absolūtos stilus
+                    const pad = (n) => n.toString().padStart(2, '0');
+                    const s = new Date(e.startTime);
+                    const en = new Date(e.endTime);
+                    const timeText = `${pad(s.getHours())}:${pad(s.getMinutes())} - ${pad(en.getHours())}:${pad(en.getMinutes())} `;
+
+                    const timeBold = document.createElement('strong');
+                    timeBold.innerText = timeText;
+                    eventDiv.appendChild(timeBold);
+                } else {
+                    eventDiv.className = 'calendar-event shadow-sm mb-1';
+                }
+
+                eventDiv.appendChild(document.createTextNode(e.title));
+
+                const formattedDate = formatPopoverDate(e.startTime, e.endTime, e.allDay);
+                eventDiv.setAttribute('data-bs-toggle', 'popover');
+                eventDiv.setAttribute('data-bs-trigger', 'hover focus');
+                eventDiv.setAttribute('data-bs-placement', 'top');
+                eventDiv.setAttribute('data-bs-title', `<span class="fw-bold">${e.categoryName}</span>`);
+                eventDiv.setAttribute('data-bs-html', 'true');
+                eventDiv.setAttribute('data-bs-content', `<strong>${e.title}</strong><br><small class="text-muted">${formattedDate}</small><br>${e.description ? `<hr class="my-1">${e.description}` : ''}`);
+
+                eventDiv.onclick = (evt) => {
+                    evt.stopPropagation();
+                    const popover = bootstrap.Popover.getInstance(eventDiv);
+                    if (popover) popover.hide();
+                    openEditModal(e);
+                };
+                return eventDiv;
+            }
+
+            async function renderCalendar() {
+                calendarGrid.innerHTML = '';
+
+                let startDate, endDate;
+                let daysToRender = [];
+
+                if (currentView === 'day') {
+                    calendarWrapper.classList.add('day-view-mode');
+                    startDate = new Date(currentDate);
+                    endDate = new Date(currentDate);
+                    currentMonthLabel.innerText = `${startDate.getDate()}. ${monthNames[startDate.getMonth()]}, ${startDate.getFullYear()}`;
+
+                    await fetchEvents(startDate, endDate);
+                    renderDayView(startDate);
+                    return;
+                } else {
+                    calendarWrapper.classList.remove('day-view-mode');
+                }
+
+                if (currentView === 'week') {
+                    const day = currentDate.getDay();
+                    const diff = currentDate.getDate() - day + (day === 0 ? -6 : 1);
+                    const monday = new Date(currentDate);
+                    monday.setDate(diff);
+
+                    for(let i = 0; i < 7; i++) {
+                        const d = new Date(monday);
+                        d.setDate(monday.getDate() + i);
+                        daysToRender.push(d);
+                    }
+                    startDate = daysToRender[0];
+                    endDate = daysToRender[6];
+                    currentMonthLabel.innerText = `${monthNames[startDate.getMonth()]}, ${startDate.getFullYear()}`;
+                } else if (currentView === 'month') {
+                    const year = currentDate.getFullYear();
+                    const month = currentDate.getMonth();
+                    currentMonthLabel.innerText = `${monthNames[month]}, ${year}`;
+
+                    const firstDayOfMonth = new Date(year, month, 1);
+                    const lastDayOfMonth = new Date(year, month + 1, 0);
+
+                    let startDayOfWeek = firstDayOfMonth.getDay() - 1;
+                    if (startDayOfWeek === -1) startDayOfWeek = 6;
+
+                    for (let i = 0; i < startDayOfWeek; i++) daysToRender.push(null);
+                    for (let day = 1; day <= lastDayOfMonth.getDate(); day++) daysToRender.push(new Date(year, month, day));
+
+                    startDate = firstDayOfMonth;
+                    endDate = lastDayOfMonth;
+                }
+
+                await fetchEvents(startDate, endDate);
+                const today = new Date();
+
+                daysToRender.forEach(cellDate => {
+                    if (cellDate === null) {
+                        const emptyCell = document.createElement('div');
+                        emptyCell.className = 'calendar-cell bg-light opacity-50';
+                        calendarGrid.appendChild(emptyCell);
+                        return;
+                    }
+
+                    const dayOfWeek = cellDate.getDay();
+                    const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+                    const isToday = (cellDate.getDate() === today.getDate() && cellDate.getMonth() === today.getMonth() && cellDate.getFullYear() === today.getFullYear());
+
+                    const cell = document.createElement('div');
+                    cell.className = `calendar-cell ${isToday ? 'today' : ''}`;
+                    cell.dataset.date = cellDate.toISOString().split('T')[0];
+
+                    const dateSpan = document.createElement('div');
+                    dateSpan.className = `calendar-date ${isWeekend ? 'weekend' : ''}`;
+                    dateSpan.innerText = cellDate.getDate();
+                    cell.appendChild(dateSpan);
+
+                    const addBtn = document.createElement('a');
+                    addBtn.className = 'add-event-btn';
+                    addBtn.innerHTML = '+';
+                    addBtn.title = "Pievienot notikumu";
+                    addBtn.onclick = () => openEditModal(null, cellDate);
+                    cell.appendChild(addBtn);
+
+                    const dayEvents = events.filter(e => {
+                        const eStart = new Date(e.startTime);
+                        const eEnd = new Date(e.endTime);
+                        return cellDate >= new Date(eStart.setHours(0,0,0,0)) &&
+                            cellDate <= new Date(eEnd.setHours(23,59,59,999));
+                    });
+
+                    dayEvents.forEach(e => {
+                        cell.appendChild(createEventElement(e));
+                    });
+
+                    calendarGrid.appendChild(cell);
+                });
+
+                const popoverTriggerList = document.querySelectorAll('[data-bs-toggle="popover"]');
+                [...popoverTriggerList].map(popoverTriggerEl => new bootstrap.Popover(popoverTriggerEl));
+            }
+
+            // --- JAUNAIS PROPORCIONĀLAIS DIENAS SKATS ---
+            function renderDayView(date) {
+                calendarGrid.innerHTML = '';
+
+                const dayEvents = events.filter(e => {
+                    const eStart = new Date(e.startTime);
+                    const eEnd = new Date(e.endTime);
+                    return date >= new Date(eStart.setHours(0,0,0,0)) && date <= new Date(eEnd.setHours(23,59,59,999));
+                });
+
+                const allDayEvents = dayEvents.filter(e => e.allDay);
+                const timedEvents = dayEvents.filter(e => !e.allDay);
+
+                // 1. Visas dienas notikumi (Augšā)
+                if (allDayEvents.length > 0) {
+                    const allDayContainer = document.createElement('div');
+                    allDayContainer.className = 'day-view-all-day';
+                    allDayContainer.innerHTML = '<strong class="small text-muted d-block mb-2">Visas dienas notikumi</strong>';
+                    allDayEvents.forEach(e => allDayContainer.appendChild(createEventElement(e, 'default')));
+                    calendarGrid.appendChild(allDayContainer);
+                }
+
+                // 2. Proporcionālais Laika Grid (07:00 - 18:00)
+                const dayContainer = document.createElement('div');
+                dayContainer.className = 'day-view-container';
+
+                const labelsCol = document.createElement('div');
+                labelsCol.className = 'day-view-time-labels';
+
+                const gridCol = document.createElement('div');
+                gridCol.className = 'day-view-grid-absolute';
+
+                // Fona klikšķa laukums jaunu notikumu pievienošanai
+                const clickArea = document.createElement('div');
+                clickArea.className = 'day-view-click-area';
+                clickArea.title = "Noklikšķiniet, lai pievienotu notikumu";
+                clickArea.onclick = (e) => {
+                    const rect = clickArea.getBoundingClientRect();
+                    const y = e.clientY - rect.top;
+                    // Aprēķina stundu balstoties uz klikšķa Y koordināti (1 stunda = 60px)
+                    const hourClicked = Math.floor(y / 60) + 7;
+                    const slotDate = new Date(date);
+                    slotDate.setHours(hourClicked, 0, 0, 0);
+                    openEditModal(null, slotDate);
+                };
+                gridCol.appendChild(clickArea);
+
+                // Ģenerē laika etiķetes
+                for (let hour = 7; hour <= 18; hour++) {
+                    const label = document.createElement('div');
+                    label.className = 'day-view-time-label';
+                    label.innerText = `${hour.toString().padStart(2, '0')}:00`;
+                    labelsCol.appendChild(label);
+                }
+
+                // Ģenerē un pozicionē notikumus
+                timedEvents.forEach(e => {
+                    const el = createEventElement(e, 'day-timed');
+
+                    let eStart = new Date(e.startTime);
+                    let eEnd = new Date(e.endTime);
+
+                    // Ierobežo notikumu dienas skata rāmjos (07:00 - 19:00)
+                    const viewStart = new Date(date); viewStart.setHours(7, 0, 0, 0);
+                    const viewEnd = new Date(date); viewEnd.setHours(19, 0, 0, 0);
+
+                    if (eStart < viewStart) eStart = viewStart;
+                    if (eEnd > viewEnd) eEnd = viewEnd;
+                    if (eStart >= eEnd) return; // Izlaiž, ja pilnībā ārpus rāmja
+
+                    // Aprēķina pikseļus (1 minūte = 1 pikselis)
+                    const topMinutes = (eStart.getHours() - 7) * 60 + eStart.getMinutes();
+                    const durationMinutes = (eEnd.getTime() - eStart.getTime()) / 60000;
+
+                    el.style.top = `${topMinutes}px`;
+                    el.style.height = `${durationMinutes}px`;
+
+                    gridCol.appendChild(el);
+                });
+
+                dayContainer.appendChild(labelsCol);
+                dayContainer.appendChild(gridCol);
+                calendarGrid.appendChild(dayContainer);
+
+                const popoverTriggerList = document.querySelectorAll('[data-bs-toggle="popover"]');
+                [...popoverTriggerList].map(popoverTriggerEl => new bootstrap.Popover(popoverTriggerEl));
+            }
+
+            async function fetchEvents(startD, endD) {
+                const s = new Date(startD); s.setHours(0, 0, 0, 0);
+                const e = new Date(endD); e.setHours(23, 59, 59, 999);
+                try {
+                    const url = `/api/v1/calendar/events?start=${s.toISOString()}&end=${e.toISOString()}&_=${new Date().getTime()}`;
+                    const res = await fetch(url, { headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' } });
+                    if (res.ok) events = await res.json();
+                } catch (err) {
+                    console.error("Kļūda ielādējot notikumus:", err);
+                }
+            }
+
+            document.getElementById('prevMonthBtn').addEventListener('click', () => {
+                if (currentView === 'day') currentDate.setDate(currentDate.getDate() - 1);
+                else if (currentView === 'week') currentDate.setDate(currentDate.getDate() - 7);
+                else currentDate.setMonth(currentDate.getMonth() - 1);
+                renderCalendar();
+            });
+
+            document.getElementById('nextMonthBtn').addEventListener('click', () => {
+                if (currentView === 'day') currentDate.setDate(currentDate.getDate() + 1);
+                else if (currentView === 'week') currentDate.setDate(currentDate.getDate() + 7);
+                else currentDate.setMonth(currentDate.getMonth() + 1);
+                renderCalendar();
+            });
+
+            document.getElementById('todayBtn').addEventListener('click', () => {
+                currentDate = new Date();
+                renderCalendar();
+            });
+
+            function openEditModal(existingEvent = null, date = null) {
+                document.getElementById('eventForm').reset();
+                document.getElementById('eventAlert').classList.add('d-none');
+
+                if (existingEvent) {
+                    document.getElementById('eventModalTitle').innerText = 'Rediģēt Notikumu';
+                    document.getElementById('eventId').value = existingEvent.id;
+                    document.getElementById('eventTitle').value = existingEvent.title;
+                    document.getElementById('eventCategory').value = existingEvent.categoryId;
+                    document.getElementById('eventDesc').value = existingEvent.description || '';
+                    document.getElementById('eventAllDay').checked = existingEvent.allDay;
+
+                    initFlatpickr(!existingEvent.allDay);
+                    fpStart.setDate(existingEvent.startTime);
+                    fpEnd.setDate(existingEvent.endTime);
+                } else {
+                    document.getElementById('eventModalTitle').innerText = 'Jauns Notikums';
+                    document.getElementById('eventId').value = '';
+                    document.getElementById('eventAllDay').checked = false;
+
+                    initFlatpickr(true);
+
+                    const startDate = new Date(date);
+                    if (startDate.getHours() === 0 && currentView !== 'day') startDate.setHours(9, 0, 0, 0);
+
+                    const endDate = new Date(startDate);
+                    endDate.setHours(startDate.getHours() + 1, 0, 0, 0);
+
+                    fpStart.setDate(startDate);
+                    fpEnd.setDate(endDate);
+                }
+
+                eventModal.show();
+            }
+
+            document.getElementById('saveEventBtn').addEventListener('click', async function() {
+                const form = document.getElementById('eventForm');
+                if (!form.checkValidity()) {
+                    form.reportValidity();
+                    return;
+                }
+
+                const selectedStart = fpStart.selectedDates[0];
+                const selectedEnd = fpEnd.selectedDates[0];
+
+                if (selectedStart && selectedEnd && (selectedEnd.getTime() < selectedStart.getTime())) {
+                    const alertBox = document.getElementById('eventAlert');
+                    alertBox.innerText = "Kļūda: Beigu datums un laiks nevar būt agrāks par sākuma datumu!";
+                    alertBox.classList.remove('d-none');
+                    return;
+                }
+
+                let sVal = document.getElementById('eventStart').value;
+                let eVal = document.getElementById('eventEnd').value;
+                if (sVal && sVal.length <= 10) sVal += "T00:00:00";
+                if (eVal && eVal.length <= 10) eVal += "T00:00:00";
+
+                const payload = {
+                    title: document.getElementById('eventTitle').value,
+                    categoryId: document.getElementById('eventCategory').value,
+                    startTime: sVal,
+                    endTime: eVal,
+                    allDay: document.getElementById('eventAllDay').checked,
+                    description: document.getElementById('eventDesc').value
+                };
+
+                const eventId = document.getElementById('eventId').value;
+                const url = eventId ? `/api/v1/calendar/events/${eventId}` : '/api/v1/calendar/events';
+                const method = eventId ? 'PUT' : 'POST';
+
+                try {
+                    const res = await fetch(url, {
+                        method: method,
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!res.ok) {
+                        const errorMsg = await res.text();
+                        throw new Error(errorMsg || "Neizdevās saglabāt notikumu.");
+                    }
+
+                    eventModal.hide();
+                    renderCalendar();
+                } catch (err) {
+                    const alertBox = document.getElementById('eventAlert');
+                    alertBox.innerText = err.message;
+                    alertBox.classList.remove('d-none');
+                }
+            });
+
+            renderCalendar();
+        });
+    </script>
+</section>
+</body>
+</html>
