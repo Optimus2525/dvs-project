@@ -10,6 +10,8 @@ import lv.smiltenesnkup.dvs.calendar.mapper.CalendarEventMapper;
 import lv.smiltenesnkup.dvs.calendar.model.CalendarEvent;
 import lv.smiltenesnkup.dvs.calendar.repository.CalendarCategoryRepository;
 import lv.smiltenesnkup.dvs.calendar.repository.CalendarEventRepository;
+import lv.smiltenesnkup.dvs.common.exception.ResourceNotFoundException;
+import lv.smiltenesnkup.dvs.calendar.repository.CalendarEventRepository;
 import lv.smiltenesnkup.dvs.calendar.service.CalendarService;
 import lv.smiltenesnkup.dvs.sharepoint.service.SharePointGraphService;
 import org.springframework.cache.annotation.Cacheable;
@@ -73,7 +75,7 @@ public class CalendarServiceImpl implements CalendarService {
     public CalendarCategoryDTO updateCategory(Long id, CalendarCategoryDTO dto) {
         log.info("Atjaunina kategoriju ID: {}", id);
         lv.smiltenesnkup.dvs.calendar.model.CalendarCategory entity = categoryRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Kategorija nav atrasta"));
+                .orElseThrow(() -> new ResourceNotFoundException("Kategorija nav atrasta ar ID: " + id));
 
         entity.setName(dto.getName());
         entity.setColorCode(dto.getColorCode());
@@ -124,7 +126,7 @@ public class CalendarServiceImpl implements CalendarService {
         log.info("Daļēji atjaunina kalendāra notikumu ID: {}", id);
 
         CalendarEvent existingEvent = eventRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Notikums nav atrasts ar ID: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Notikums nav atrasts ar ID: " + id));
 
         // Atjaunina tikai tos laukus, kas ir atsūtīti
         if(updateDTO.getTitle() != null) existingEvent.setTitle(updateDTO.getTitle());

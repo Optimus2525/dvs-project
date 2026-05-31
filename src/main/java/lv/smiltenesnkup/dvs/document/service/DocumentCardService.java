@@ -1,6 +1,7 @@
 package lv.smiltenesnkup.dvs.document.service;
 
 import lv.smiltenesnkup.dvs.document.dto.DocumentCardDTO;
+import lv.smiltenesnkup.dvs.document.dto.DocumentFileDTO;
 
 import java.util.List;
 
@@ -17,5 +18,11 @@ public interface DocumentCardService {
      * Piemēram: key = "Saņemšanas veids", value = "E-pasts"
      */
     List<DocumentCardDTO> searchByMetadata(Long listId, String key, String value);
+
+    /**
+     * Augšupielādē failu un piesaista to dokumenta kartītei.
+     */
+ DocumentFileDTO uploadFile(Long cardId, org.springframework.web.multipart.MultipartFile file, String uploadedBy);
+
 
 }

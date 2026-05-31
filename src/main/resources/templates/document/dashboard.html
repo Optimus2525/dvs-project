@@ -1,7 +1,32 @@
 <!DOCTYPE html>
 <html lang="lv" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/base :: layout(~{::section})}">
 <body>
+
 <section>
+    <style>
+        /* Drag & Drop zonas stili */
+        .drop-zone {
+            border: 2px dashed #0d6efd;
+            border-radius: 0.5rem;
+            padding: 3rem 1rem;
+            text-align: center;
+            background-color: #f8f9fa;
+            cursor: pointer;
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+
+        .drop-zone.dragover {
+            background-color: #e9ecef;
+            border-color: #198754;
+        }
+
+        .drop-zone-icon {
+            font-size: 3rem;
+            color: #0d6efd;
+            margin-bottom: 1rem;
+        }
+    </style>
+
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="h4 mb-0">Ienākošā korespondence 2026</h2>
     </div>
@@ -14,44 +39,51 @@
                         <table class="table table-hover table-bordered align-middle text-nowrap">
                             <thead class="table-light">
                             <tr>
-                                <th>ID</th>
+                                <th>Virsraksts / Apraksts</th>
                                 <th>Numurs</th>
 
                                 <!-- DINAMISKĀS KOLONNAS (Virsraksti) -->
                                 <th th:each="field : ${dynamicFields}" th:text="${field.name}"></th>
 
+                                <th class="text-center">Failu skaits</th>
                                 <th>Izveidoja</th>
                             </tr>
                             </thead>
                             <tbody>
                             <!-- DOKUMENTU DATI -->
                             <tr th:each="card : ${documentCards}">
-                                <td th:text="${card.id}"></td>
-                                <td th:text="${card.documentNumber}"></td>
+                                <td>
+                                    <a th:href="@{'/documents/cards/' + ${card.id}}"
+                                       class="text-decoration-none fw-bold text-primary"
+                                       th:text="${card.title}"></a>
+                                </td>
+                                <td><span class="text-muted" th:text="${card.documentNumber}"></span></td>
 
                                 <!-- DINAMISKĀS VĒRTĪBAS NO JSONB AR FORMATĒŠANU -->
                                 <td th:each="field : ${dynamicFields}">
                                     <th:block th:if="${card.metadata != null and card.metadata[field.name] != null and card.metadata[field.name] != ''}">
-
                                         <th:block th:switch="${field.type}">
-                                            <!-- Ja lauks ir DATE, tiek izsaukts Java LocalDate parsētājs un noformatēts uz dd.MM.yyyy -->
                                             <span th:case="'DATE'"
                                                   th:text="${#temporals.format(T(java.time.LocalDate).parse(card.metadata[field.name]), 'dd.MM.yyyy')}">
-                                                    </span>
-
-                                            <!-- Visiem pārējiem tipiem (TEXT, SELECT) vērtība tiek attēlota kā parasti -->
+                                            </span>
                                             <span th:case="*" th:text="${card.metadata[field.name]}"></span>
                                         </th:block>
-
+                                    </th:block>
+                                    <!-- Ja vērtība ir tukša, parādam svītriņu -->
+                                    <th:block th:unless="${card.metadata != null and card.metadata[field.name] != null and card.metadata[field.name] != ''}">
+                                        <span class="text-muted fst-italic">-</span>
                                     </th:block>
                                 </td>
 
+                                <td class="text-center">
+                                    <span class="badge bg-secondary rounded-pill" th:text="${card.files.size()}">0</span>
+                                </td>
                                 <td th:text="${card.createdBy}"></td>
                             </tr>
 
                             <!-- Ja saraksts ir tukšs -->
                             <tr th:if="${#lists.isEmpty(documentCards)}">
-                                <td th:colspan="${dynamicFields.size() + 3}" class="text-center text-muted py-4">
+                                <td th:colspan="${dynamicFields.size() + 4}" class="text-center text-muted py-4">
                                     Šajā sarakstā vēl nav pievienots neviens dokuments.
                                 </td>
                             </tr>
@@ -71,6 +103,12 @@
                     <form id="dynamicDocForm">
                         <!-- Slēptie pamatdati -->
                         <input type="hidden" id="documentListId" th:value="${listId}">
+
+                        <!-- PAMATLAUKS: Virsraksts -->
+                        <div th:replace="~{components/forms :: textInput(
+                                id='documentTitle', label='Virsraksts / Dokumenta apraksts', name='title', value='', required=true)}"></div>
+
+                        <hr class="my-4">
 
                         <!-- DINAMISKAIS CIKLS: Zīmē laukus atkarībā no to tipa -->
                         <th:block th:each="field : ${dynamicFields}">
@@ -118,7 +156,8 @@
 
                         </th:block>
 
-                        <button type="button" id="saveDocBtn" class="btn btn-success w-100 mt-3">Saglabāt sistēmā</button>
+                        <button type="button" id="saveDocBtn" class="btn btn-success w-100 mt-3">Saglabāt sistēmā
+                        </button>
                     </form>
                 </div>
             </div>
@@ -127,12 +166,20 @@
 
     <!-- Vanilla JS datu savākšanai un sūtīšanai -->
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const saveBtn = document.getElementById('saveDocBtn');
 
             saveBtn.addEventListener('click', function() {
+                // Formas validācija
+                const form = document.getElementById('dynamicDocForm');
+                if (!form.checkValidity()) {
+                    form.reportValidity();
+                    return;
+                }
+
                 // 1. Savācam pamatdatus
                 const listId = document.getElementById('documentListId').value;
+                const title = document.getElementById('documentTitle').value;
                 const metadata = {};
 
                 // 2. Savācam visus dinamiskos laukus (tiem id sākas ar 'field_')
@@ -147,6 +194,7 @@
                 // 3. Sagatavojam DTO objektu
                 const payload = {
                     documentListId: parseInt(listId),
+                    title: title,
                     documentNumber: "GEN-" + Math.floor(Math.random() * 1000), // Pagaidu numurs
                     createdBy: "Lietotājs", // Vēlāk ņemsim no Spring Security
                     metadata: metadata
@@ -165,14 +213,15 @@
                         return response.json();
                     })
                     .then(data => {
-                        alert("Dokuments veiksmīgi saglabāts! ID: " + data.id);
-                        document.getElementById('dynamicDocForm').reset();
+                        // Pārlādējam lapu, lai uzreiz redzētu jauno ierakstu tabulā
+                        window.location.reload();
                     })
                     .catch(error => {
                         alert(error.message);
                         console.error(error);
                     });
             });
+
         });
     </script>
 </section>

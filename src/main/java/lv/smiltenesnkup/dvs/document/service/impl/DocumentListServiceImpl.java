@@ -10,6 +10,8 @@ import lv.smiltenesnkup.dvs.document.mapper.FieldDefinitionMapper;
 import lv.smiltenesnkup.dvs.document.model.DocumentList;
 import lv.smiltenesnkup.dvs.document.repository.DocumentListRepository;
 import lv.smiltenesnkup.dvs.document.repository.FieldDefinitionRepository;
+import lv.smiltenesnkup.dvs.common.exception.ResourceNotFoundException;
+import lv.smiltenesnkup.dvs.document.repository.FieldDefinitionRepository;
 import lv.smiltenesnkup.dvs.document.service.DocumentListService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -50,7 +52,7 @@ public class DocumentListServiceImpl implements DocumentListService {
     public DocumentListDTO getDocumentListById(Long id) {
         log.info("Fetching document list with ID: {}", id);
         DocumentList documentList = documentListRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Dokumentu saraksts nav atrasts ar ID: " + id)); // Vēlāk šis tiks aizstāts ar globālo Exception
+                .orElseThrow(() -> new ResourceNotFoundException("Dokumentu saraksts nav atrasts ar ID: " + id));
 
         return documentListMapper.toDto(documentList);
     }

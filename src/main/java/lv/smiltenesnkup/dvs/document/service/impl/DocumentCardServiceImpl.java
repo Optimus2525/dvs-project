@@ -8,9 +8,19 @@ import lv.smiltenesnkup.dvs.document.model.DocumentCard;
 import lv.smiltenesnkup.dvs.document.model.DocumentList;
 import lv.smiltenesnkup.dvs.document.repository.DocumentCardRepository;
 import lv.smiltenesnkup.dvs.document.repository.DocumentListRepository;
+import lv.smiltenesnkup.dvs.common.exception.ResourceNotFoundException;
+import lv.smiltenesnkup.dvs.document.enums.FileRole;
+import lv.smiltenesnkup.dvs.document.mapper.DocumentFileMapper;
+import lv.smiltenesnkup.dvs.document.model.DocumentFile;
+import lv.smiltenesnkup.dvs.document.repository.DocumentFileRepository;
+import lv.smiltenesnkup.dvs.document.enums.FileRole;
+import lv.smiltenesnkup.dvs.document.mapper.DocumentFileMapper;
+import lv.smiltenesnkup.dvs.document.model.DocumentFile;
+import lv.smiltenesnkup.dvs.document.repository.DocumentFileRepository;
 import lv.smiltenesnkup.dvs.document.service.DocumentCardService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -23,6 +33,8 @@ public class DocumentCardServiceImpl implements DocumentCardService {
     private final DocumentCardRepository documentCardRepository;
     private final DocumentListRepository documentListRepository;
     private final DocumentCardMapper documentCardMapper;
+    private final DocumentFileRepository documentFileRepository;
+    private final DocumentFileMapper documentFileMapper;
 
     @Override
     @Transactional
@@ -31,7 +43,7 @@ public class DocumentCardServiceImpl implements DocumentCardService {
 
         // Pārbauda, vai saraksts vispār eksistē
         DocumentList documentList = documentListRepository.findById(dto.getDocumentListId())
-                .orElseThrow(() -> new RuntimeException("Dokumentu saraksts nav atrasts ar ID: " + dto.getDocumentListId()));
+                .orElseThrow(() -> new ResourceNotFoundException("Dokumentu saraksts nav atrasts ar ID: " + dto.getDocumentListId()));
 
         // MapStruct automātiski saliks visus laukus, ieskaitot JSONB metadata Map objektu
         DocumentCard entity = documentCardMapper.toEntity(dto);
@@ -57,7 +69,7 @@ public class DocumentCardServiceImpl implements DocumentCardService {
     public DocumentCardDTO getCardById(Long id) {
         log.info("Fetching document card with ID: {}", id);
         DocumentCard entity = documentCardRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Dokumenta kartīte nav atrasta ar ID: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Dokumenta kartīte nav atrasta ar ID: " + id));
         return documentCardMapper.toDto(entity);
     }
 
@@ -73,6 +85,32 @@ public class DocumentCardServiceImpl implements DocumentCardService {
         return documentCardRepository.findByMetadataContains(listId, jsonQuery).stream()
                 .map(documentCardMapper::toDto)
                 .collect(Collectors.toList());
+    }
+
+
+    @Override
+    @Transactional
+    public lv.smiltenesnkup.dvs.document.dto.DocumentFileDTO uploadFile(Long cardId, MultipartFile file, String uploadedBy) {
+        log.info("Augšupielādē failu '{}' kartītei ID: {}", file.getOriginalFilename(), cardId);
+
+        DocumentCard card = documentCardRepository.findById(cardId)
+                .orElseThrow(() -> new lv.smiltenesnkup.dvs.common.exception.ResourceNotFoundException("Kartīte nav atrasta ar ID: " + cardId));
+
+        // TODO: Šeit vēlāk izsauksim SharePointGraphService, lai nosūtītu failu uz SharePoint un iegūtu reālo ID
+        String mockSharePointFileId = "SP-" + System.currentTimeMillis();
+
+        DocumentFile documentFile = DocumentFile.builder()
+                .documentCard(card)
+                .fileName(file.getOriginalFilename())
+                .fileSize(file.getSize())
+                .mimeType(file.getContentType())
+                .uploadedBy(uploadedBy)
+                .fileRole(FileRole.ATTACHMENT)
+                .sharepointFileId(mockSharePointFileId)
+                .build();
+
+        DocumentFile savedFile = documentFileRepository.save(documentFile);
+        return documentFileMapper.toDto(savedFile);
     }
 
 }

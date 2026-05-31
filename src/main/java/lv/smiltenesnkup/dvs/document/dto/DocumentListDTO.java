@@ -25,4 +25,8 @@ public class DocumentListDTO {
 
     private String description;
 
+    private String sharepointSiteId;
+
+    private String sharepointListId;
+
 }

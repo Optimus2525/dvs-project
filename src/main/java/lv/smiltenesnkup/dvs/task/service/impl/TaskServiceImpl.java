@@ -15,6 +15,8 @@ import lv.smiltenesnkup.dvs.task.model.Task;
 import lv.smiltenesnkup.dvs.task.repository.NotificationRepository;
 import lv.smiltenesnkup.dvs.task.repository.SubTaskRepository;
 import lv.smiltenesnkup.dvs.task.repository.TaskRepository;
+import lv.smiltenesnkup.dvs.common.exception.BusinessLogicException;
+import lv.smiltenesnkup.dvs.common.exception.ResourceNotFoundException;
 import lv.smiltenesnkup.dvs.task.service.TaskService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,7 +44,7 @@ public class TaskServiceImpl implements TaskService {
     public TaskDTO getTaskById(Long id) {
         log.info("Tiek meklēts uzdevums ar ID: {}", id);
         Task task = taskRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Uzdevums nav atrasts ar ID: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Uzdevums nav atrasts ar ID: " + id));
         return taskMapper.toDto(task);
     }
 
@@ -51,7 +53,8 @@ public class TaskServiceImpl implements TaskService {
     public TaskDTO updateTask(Long id, TaskUpdateDTO updateDTO) {
         log.info("Tiek atjaunināti dati uzdevumam ar ID: {}", id);
         Task existingTask = taskRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Uzdevums nav atrasts ar ID: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Uzdevums nav atrasts ar ID: " + id));
+
 
         // Tiek atjaunināti tikai pamatdati (virknes un datumi)
         existingTask.setTitle(updateDTO.getTitle());
@@ -71,18 +74,18 @@ public class TaskServiceImpl implements TaskService {
 
         // Validē datumus
         if (taskDTO.getDueDate().isBefore(taskDTO.getStartDate())) {
-            throw new IllegalArgumentException("Izpildes datums nevar būt mazāks par sākuma datumu.");
+            throw new BusinessLogicException("Izpildes datums nevar būt mazāks par sākuma datumu.");
         }
 
         // Pārbauda maksimālo apakšuzdevumu skaitu
         if (taskDTO.getSubTasks() != null && taskDTO.getSubTasks().size() > 3) {
-            throw new IllegalArgumentException("Vienam uzdevumam nevar būt vairāk par 3 apakšuzdevumiem.");
+            throw new BusinessLogicException("Vienam uzdevumam nevar būt vairāk par 3 apakšuzdevumiem.");
         }
 
         // Apstrādā Komplekso uzdevumu loģiku
         if (taskDTO.getTaskType() == TaskType.COMPLEX_SEQUENTIAL || taskDTO.getTaskType() == TaskType.COMPLEX_PARALLEL) {
             if (taskDTO.getSubTasks() == null || taskDTO.getSubTasks().size() < 2) {
-                throw new IllegalArgumentException("Kompleksajam uzdevumam jābūt vismaz 2 apakšuzdevumiem.");
+                throw new BusinessLogicException("Kompleksajam uzdevumam jābūt vismaz 2 apakšuzdevumiem.");
             }
 
             LocalDate previousDate = taskDTO.getStartDate();
@@ -92,13 +95,13 @@ public class TaskServiceImpl implements TaskService {
 
                 // Datumu validācija kompleksajiem apakšuzdevumiem
                 if (st.getDueDate() == null) {
-                    throw new IllegalArgumentException("Apakšuzdevumam jānorāda izpildes datums.");
+                    throw new BusinessLogicException("Apakšuzdevumam jānorāda izpildes datums.");
                 }
                 if (st.getDueDate().isBefore(previousDate)) {
-                    throw new IllegalArgumentException(st.getOrderIndex() + ". apakšuzdevuma datums nevar būt mazāks par iepriekšējo soli.");
+                    throw new BusinessLogicException(st.getOrderIndex() + ". apakšuzdevuma datums nevar būt mazāks par iepriekšējo soli.");
                 }
                 if (st.getDueDate().isAfter(taskDTO.getDueDate())) {
-                    throw new IllegalArgumentException("Apakšuzdevuma datums nevar pārsniegt galvenā uzdevuma termiņu.");
+                    throw new BusinessLogicException("Apakšuzdevuma datums nevar pārsniegt galvenā uzdevuma termiņu.");
                 }
                 previousDate = st.getDueDate();
 
@@ -157,7 +160,7 @@ public class TaskServiceImpl implements TaskService {
         log.info("Tiek atjaunināti dati apakšuzdevumam ID: {}", subTaskId);
 
         SubTask currentSubTask = subTaskRepository.findById(subTaskId)
-                .orElseThrow(() -> new RuntimeException("Apakšuzdevums nav atrasts"));
+                .orElseThrow(() -> new ResourceNotFoundException("Apakšuzdevums nav atrasts ar ID: " + subTaskId));
 
         Task parentTask = currentSubTask.getParentTask();
 

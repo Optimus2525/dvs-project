@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="lv" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/base :: layout(~{::section})}">
+<body>
+<section>
+    <style>
+        .drop-zone {
+            border: 2px dashed #0d6efd;
+            border-radius: 0.5rem;
+            padding: 2rem 1rem;
+            text-align: center;
+            background-color: #f8f9fa;
+            cursor: pointer;
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+        .drop-zone.dragover {
+            background-color: #e9ecef;
+            border-color: #198754;
+        }
+        .drop-zone-icon {
+            font-size: 2.5rem;
+            color: #0d6efd;
+            margin-bottom: 0.5rem;
+        }
+        .metadata-label {
+            font-size: 0.85rem;
+            color: #6c757d;
+            margin-bottom: 0.2rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .metadata-value {
+            font-size: 1.05rem;
+            font-weight: 500;
+            color: #212529;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #f0f0f0;
+        }
+    </style>
+
+    <!-- Navigācija atpakaļ uz sarakstu -->
+    <div class="mb-3">
+        <a href="/documents/dashboard" class="text-decoration-none text-muted">
+            &larr; Atpakaļ uz sarakstu
+        </a>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="h3 mb-0 fw-bold" th:text="${card.title}">Dokumenta virsraksts</h2>
+        <div>
+            <button class="btn btn-outline-primary me-2">Rediģēt metadatus</button>
+            <button class="btn btn-primary">Izveidot Uzdevumu</button>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- KREISĀ PUSE: Metadati -->
+        <div class="col-lg-7">
+            <div class="card shadow-sm border-top-0 border-start-0 border-end-0 border-bottom border-primary border-3">
+                <div class="card-header bg-white fw-bold py-3">
+                    Pamatinformācija
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <!-- Statiskie dati -->
+                        <div class="col-md-6">
+                            <div class="metadata-label">Numurs</div>
+                            <div class="metadata-value" th:text="${card.documentNumber}"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="metadata-label">Atbildīgā persona / Izveidoja</div>
+                            <div class="metadata-value" th:text="${card.createdBy}"></div>
+                        </div>
+
+                        <!-- Dinamiskie dati no JSONB -->
+                        <div class="col-md-6" th:each="field : ${dynamicFields}">
+                            <div class="metadata-label" th:text="${field.name}">Lauka nosaukums</div>
+
+                            <div class="metadata-value">
+                                <th:block th:if="${card.metadata != null and card.metadata[field.name] != null and card.metadata[field.name] != ''}">
+                                    <th:block th:switch="${field.type}">
+                                        <span th:case="'DATE'" th:text="${#temporals.format(T(java.time.LocalDate).parse(card.metadata[field.name]), 'dd.MM.yyyy')}"></span>
+                                        <span th:case="*" th:text="${card.metadata[field.name]}"></span>
+                                    </th:block>
+                                </th:block>
+                                <th:block th:unless="${card.metadata != null and card.metadata[field.name] != null and card.metadata[field.name] != ''}">
+                                    <span class="text-muted fst-italic">-</span>
+                                </th:block>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- LABĀ PUSE: Faili -->
+        <div class="col-lg-5">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white fw-bold py-3 d-flex justify-content-between align-items-center">
+                    <span>Dokumenti (<span id="fileCountBadge" th:text="${card.files.size()}">0</span>)</span>
+                </div>
+                <div class="card-body">
+
+                    <input type="hidden" id="uploadCardId" th:value="${card.id}">
+                    <div id="uploadAlert" class="alert d-none" role="alert"></div>
+
+                    <!-- Pievienoto failu saraksts -->
+                    <ul class="list-group list-group-flush mb-4" id="uploadedFilesList">
+
+                        <!-- Jau esošie faili no datubāzes -->
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-3" th:each="file : ${card.files}">
+                            <div class="d-flex align-items-center text-truncate" style="max-width: 75%;">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="#dc3545" class="me-3 flex-shrink-0" viewBox="0 0 16 16">
+                                    <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2z"/>
+                                </svg>
+                                <div>
+                                    <div class="fw-bold text-truncate" th:text="${file.fileName}" th:title="${file.fileName}">Fails.pdf</div>
+                                    <div class="small text-muted" th:text="${#temporals.format(file.uploadedAt, 'dd.MM.yyyy HH:mm')} + ' • ' + ${file.uploadedBy}">Šodien</div>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-sm btn-light text-primary" title="Lejupielādēt">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg>
+                                </button>
+                            </div>
+                        </li>
+
+                        <li class="list-group-item text-muted text-center py-4 border-0" id="noFilesMsg" th:if="${#lists.isEmpty(card.files)}">
+                            Šim dokumentam vēl nav pievienots neviens fails.
+                        </li>
+                    </ul>
+
+                    <!-- Drag & Drop Zona -->
+                    <div id="dropZone" class="drop-zone">
+                        <div class="drop-zone-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/></svg>
+                        </div>
+                        <h6 class="fw-bold text-secondary">Velciet failus šeit</h6>
+                        <p class="text-muted small mb-3">vai</p>
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="document.getElementById('fileInput').click()">Izvēlēties failus no datora</button>
+                        <input type="file" id="fileInput" class="d-none" multiple>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vanilla JS Failu Augšupielādei -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const dropZone = document.getElementById('dropZone');
+            const fileInput = document.getElementById('fileInput');
+            const uploadAlert = document.getElementById('uploadAlert');
+            const uploadedFilesList = document.getElementById('uploadedFilesList');
+            const noFilesMsg = document.getElementById('noFilesMsg');
+            const cardId = document.getElementById('uploadCardId').value;
+            const fileCountBadge = document.getElementById('fileCountBadge');
+
+            const showUploadMsg = (msg, isError = false) => {
+                uploadAlert.className = `alert ${isError ? 'alert-danger' : 'alert-success'} mb-3`;
+                uploadAlert.innerText = msg;
+                uploadAlert.classList.remove('d-none');
+                setTimeout(() => uploadAlert.classList.add('d-none'), 4000);
+            };
+
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, preventDefaults, false);
+            });
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => dropZone.classList.add('dragover'), false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => dropZone.classList.remove('dragover'), false);
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                handleFiles(e.dataTransfer.files);
+            });
+
+            fileInput.addEventListener('change', function() {
+                handleFiles(this.files);
+            });
+
+            function handleFiles(files) {
+                if (!cardId) return;
+                ([...files]).forEach(file => {
+                    uploadFile(file, cardId);
+                });
+            }
+
+            async function uploadFile(file, cardId) {
+                const formData = new FormData();
+                formData.append('file', file);
+
+                if (noFilesMsg) noFilesMsg.style.display = 'none';
+
+                const li = document.createElement('li');
+                li.className = 'list-group-item d-flex justify-content-between align-items-center px-0 py-3';
+                li.innerHTML = `
+                    <div class="d-flex align-items-center text-truncate" style="max-width: 75%;">
+                        <div class="spinner-border spinner-border-sm text-primary me-3 flex-shrink-0" role="status"></div>
+                        <div>
+                            <div class="fw-bold text-truncate">${file.name}</div>
+                            <div class="small text-muted">Augšupielādē...</div>
+                        </div>
+                    </div>
+                `;
+                uploadedFilesList.appendChild(li);
+
+                try {
+                    const response = await fetch(`/api/v1/documents/cards/${cardId}/files`, {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (!response.ok) {
+                        const err = await response.json();
+                        throw new Error(err.message || "Kļūda augšupielādējot");
+                    }
+
+                    const result = await response.json();
+
+                    // Pēc veiksmīgas augšupielādes nomainām spineri pret PDF ikonu un pieliekam lejuplādes pogu
+                    li.innerHTML = `
+                        <div class="d-flex align-items-center text-truncate" style="max-width: 75%;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="#dc3545" class="me-3 flex-shrink-0" viewBox="0 0 16 16">
+                                <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2z"/>
+                            </svg>
+                            <div>
+                                <div class="fw-bold text-truncate" title="${result.fileName}">${result.fileName}</div>
+                                <div class="small text-success">Tikko augšupielādēts</div>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-light text-primary" title="Lejupielādēt">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg>
+                            </button>
+                        </div>
+                    `;
+
+                    // Palielinām failu skaitītāju
+                    fileCountBadge.innerText = parseInt(fileCountBadge.innerText) + 1;
+                    showUploadMsg("Fails veiksmīgi augšupielādēts!");
+
+                } catch (error) {
+                    li.innerHTML = `
+                        <div class="d-flex align-items-center text-truncate" style="max-width: 75%;">
+                            <span class="text-danger fw-bold me-3">!</span>
+                            <div>
+                                <div class="fw-bold text-truncate text-danger">${file.name}</div>
+                                <div class="small text-danger">Kļūda</div>
+                            </div>
+                        </div>
+                    `;
+                    showUploadMsg(error.message, true);
+                }
+            }
+        });
+    </script>
+</section>
+</body>
+</html>

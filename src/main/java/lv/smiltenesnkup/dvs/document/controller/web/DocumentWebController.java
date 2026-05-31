@@ -7,6 +7,7 @@ import lv.smiltenesnkup.dvs.document.service.DocumentListService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 /**
@@ -39,6 +40,24 @@ public class DocumentWebController {
         model.addAttribute("documentCards", documentCardService.getCardsByListId(listId));
 
         return "document/dashboard";
+    }
+
+
+    /**
+     * Atver konkrēta dokumenta kartītes detalizēto skatu.
+     */
+    @GetMapping("/cards/{id}")
+    public String showCardDetail(@PathVariable Long id, Model model) {
+        log.info("Lietotājs atver dokumenta kartīti ID: {}", id);
+
+        lv.smiltenesnkup.dvs.document.dto.DocumentCardDTO card = documentCardService.getCardById(id);
+
+        model.addAttribute("pageTitle", "Dokuments " + card.getDocumentNumber());
+        model.addAttribute("card", card);
+        // Padodam arī saraksta lauku definīcijas, lai zinātu, kā saucas metadati
+        model.addAttribute("dynamicFields", documentListService.getFieldsByListId(card.getDocumentListId()));
+
+        return "document/card-detail";
     }
 
 }

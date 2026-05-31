@@ -3,6 +3,18 @@
 Visi ievērojamie šī projekta labojumi tiks dokumentēti šajā failā.
 Projekts ievēro [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+### Pievienots
+- **Globālā Kļūdu Apstrāde:** Ieviests `GlobalExceptionHandler` ar standartizētu JSON kļūdu atgriešanu (ErrorResponse). Izveidoti pielāgoti izņēmumi `ResourceNotFoundException` un `BusinessLogicException`.
+- **Failu Pārvaldība (1:N):** Izveidota `DocumentFile` entītija un tabula failu glabāšanai. Pievienots `FileRole` enum (MAIN_DOCUMENT, ATTACHMENT, SCAN, SIGNED_CONTAINER) sagatavojot sistēmu eParaksts integrācijai.
+- **Failu Augšupielāde:** Izveidots REST API end-points failu saņemšanai (`multipart/form-data`) un pievienota asinhrona vilkšanas un mešanas (Drag & Drop) funkcionalitāte UI pusē.
+- **Dokumenta Kartiņas Skats:** Izveidots jauns detalizēts skats (`card-detail.html`), kurā vienuviet redzami visi metadati un pievienotie faili.
+- **SharePoint Integrācijas Bāze:** Datubāzē pievienoti lauki Two-Way sinhronizācijai (`sharepoint_site_id`, `sharepoint_list_id`, `sharepoint_internal_name`, `sharepoint_item_id`).
+- **Dokumentu Virsraksti:** Kartītēm pievienots obligāts `title` lauks, kas kalpo kā galvenais identifikators un saite sarakstos.
+
+### Mainīts
+- **Servisu Refaktorings:** Visi esošie servisi (`TaskService`, `CalendarService`, `DocumentListService`, `DocumentCardService`) pārrakstīti, lai izmantotu jaunos pielāgotos kļūdu izņēmumus.
+- **Sarakstu Skats (Dashboard):** Vienkāršots dokumentu saraksta HTML skats, noņemot liekās kolonnas, padarot virsrakstu par klikšķināmu saiti un pievienojot failu skaitītāju.
+
 ## [1.5.0] - 2026-05-30
 
 ### Pievienots (Added)

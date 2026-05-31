@@ -9,7 +9,7 @@ import org.mapstruct.ReportingPolicy;
 /**
  * Kartē datus starp DocumentCard entītiju un DTO.
  */
-@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE, uses = {DocumentFileMapper.class})
 public interface DocumentCardMapper {
 
     // Pārnes ID no saistītās entītijas uz DTO lauku

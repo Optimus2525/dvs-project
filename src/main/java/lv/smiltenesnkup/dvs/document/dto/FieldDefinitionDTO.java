@@ -15,5 +15,6 @@ public class FieldDefinitionDTO {
     private String name;
     private String type;
     private Map<String, Object> options;
+    private String sharepointInternalName;
 
 }

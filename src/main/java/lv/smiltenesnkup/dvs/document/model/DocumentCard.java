@@ -4,6 +4,9 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 import java.util.Map;
 
@@ -27,14 +30,21 @@ public class DocumentCard {
     @JoinColumn(name = "document_list_id", nullable = false)
     private DocumentList documentList;
 
+    @Column(nullable = false)
+    private String title;
+
     @Column(name = "document_number")
     private String documentNumber;
 
     @Column(name = "created_by", nullable = false)
     private String createdBy;
 
-    @Column(name = "sharepoint_file_id")
-    private String sharepointFileId;
+    @Column(name = "sharepoint_item_id")
+    private String sharepointItemId;
+
+    @OneToMany(mappedBy = "documentCard", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<DocumentFile> files = new ArrayList<>();
 
     @Column(name = "created_at", insertable = false, updatable = false)
     private java.time.LocalDateTime createdAt;

@@ -7,8 +7,11 @@ import lv.smiltenesnkup.dvs.document.dto.DocumentCardDTO;
 import lv.smiltenesnkup.dvs.document.dto.DocumentListDTO;
 import lv.smiltenesnkup.dvs.document.service.DocumentCardService;
 import lv.smiltenesnkup.dvs.document.service.DocumentListService;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
 
 import java.util.List;
 
@@ -60,6 +63,22 @@ public class DocumentApiController {
             @RequestParam String value) {
         log.info("REST request to search DocumentCards. List: {}, Key: {}, Value: {}", listId, key, value);
         return ResponseEntity.ok(documentCardService.searchByMetadata(listId, key, value));
+    }
+
+
+    /**
+     * Apstrādā failu augšupielādi konkrētai dokumenta kartītei.
+     */
+    @PostMapping(value = "/cards/{cardId}/files", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<lv.smiltenesnkup.dvs.document.dto.DocumentFileDTO> uploadFile(
+            @PathVariable Long cardId,
+            @RequestParam("file") MultipartFile file) {
+        log.info("REST pieprasījums faila augšupielādei kartītei ID: {}", cardId);
+
+        // Pagaidām statisks lietotājs, vēlāk ņemsim no Spring Security Principal
+        String uploadedBy = "Lietotājs";
+
+        return ResponseEntity.ok(documentCardService.uploadFile(cardId, file, uploadedBy));
     }
 
 }

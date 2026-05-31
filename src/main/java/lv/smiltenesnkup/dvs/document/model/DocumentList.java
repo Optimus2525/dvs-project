@@ -28,4 +28,10 @@ public class DocumentList {
     @Column
     private String description;
 
+    @Column(name = "sharepoint_site_id")
+    private String sharepointSiteId;
+
+    @Column(name = "sharepoint_list_id")
+    private String sharepointListId;
+
 }

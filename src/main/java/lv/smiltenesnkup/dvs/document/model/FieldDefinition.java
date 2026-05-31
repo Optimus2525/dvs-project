@@ -38,4 +38,7 @@ public class FieldDefinition {
     @Column(columnDefinition = "jsonb")
     private Map<String, Object> options;
 
+    @Column(name = "sharepoint_internal_name")
+    private String sharepointInternalName;
+
 }
