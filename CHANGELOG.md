@@ -3,6 +3,26 @@
 Visi ievērojamie šī projekta labojumi tiks dokumentēti šajā failā.
 Projekts ievēro [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] - 2026-06-01
+
+### Pievienots
+- **Vienots Lietotāja Galvenais Panelis (Dashboard):** Apvienoti kalendāra un uzdevumu bloki vienā intuitīvā skatā.
+- **Dinamiska skatu pārslēgšana:** Kalendārā izvēloties "Dienas skatu", uzdevumu bloki tiek automātiski paslēpti, lai atbrīvotu vietu ekrānā.
+- **Navigācijas hierarhija:** Kreisās puses izvēlne pārveidota par daudzlīmeņu (nested) navigācijas koku (Tree-View).
+- **Dienas skata uzlabojumi:** Pievienotas SVG bultiņas un precīza laika intervālu atainošana notikumiem, kas nav visas dienas notikumi.
+
+### Izmainīts
+- **Koda refaktorings (Separation of Concerns):** Apjomīgie CSS un JavaScript bloki iznesti no HTML failiem uz atsevišķiem failiem `static/css/` un `static/js/` mapēs, ievērojami uzlabojot koda lasāmību un pārlūka kešošanu.
+- **Tabulu unifikācija:** Uzdevumu un Lietvedības sarakstu tabulām ieviests vienots dizaina standarts (fiksēts 20% platums pirmajai kolonnai, teksta lūšana garos virsrakstos, `table-bordered`).
+- **Datu kārtošana:** Dokumentu kartītes (*Backend* līmenī) tagad automātiski tiek kārtotas pēc izveides datuma, jaunākos ierakstus vienmēr rādot augšpusē (`OrderByCreatedAtDesc`).
+
+### Izlabots
+- **500 Internal Server Error:** Salabota kļūda datumu parsēšanā "Visas dienas notikumiem", automātiski pievienojot pusnakts laiku pirms sūtīšanas uz serveri.
+- **Kalendāra validācija:** Atjaunota loģika, kas neļauj saglabāt notikumu, ja beigu datums/laiks ir agrāks par sākuma datumu.
+- **Popover logi:** Atjaunota un salabota *Hover* (Popover) logu funkcionalitāte un to automātiskā paslēpšana pirms modālā loga atvēršanas.
+
+## [1.6.0] - 2026-05-31
+
 ### Pievienots
 - **Globālā Kļūdu Apstrāde:** Ieviests `GlobalExceptionHandler` ar standartizētu JSON kļūdu atgriešanu (ErrorResponse). Izveidoti pielāgoti izņēmumi `ResourceNotFoundException` un `BusinessLogicException`.
 - **Failu Pārvaldība (1:N):** Izveidota `DocumentFile` entītija un tabula failu glabāšanai. Pievienots `FileRole` enum (MAIN_DOCUMENT, ATTACHMENT, SCAN, SIGNED_CONTAINER) sagatavojot sistēmu eParaksts integrācijai.

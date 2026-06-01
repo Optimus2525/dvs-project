@@ -15,10 +15,12 @@ import java.util.List;
 public interface DocumentCardRepository extends JpaRepository<DocumentCard, Long> {
 
     /**
-     * Atrod visas dokumentu kartītes konkrētam dokumentu sarakstam.
+     * Atrod visas dokumentu kartītes konkrētam dokumentu sarakstam, sakārtotas no jaunākās uz vecāko.
      */
-    List<DocumentCard> findAllByDocumentListId(Long documentListId);
+    List<DocumentCard> findAllByDocumentListIdOrderByCreatedAtDesc(Long documentListId);
 
+
+    /**
 
     /**
      * Native PostgreSQL vaicājums, kas meklē JSONB kolonnā.

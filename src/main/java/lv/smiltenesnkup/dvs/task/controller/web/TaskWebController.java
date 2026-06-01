@@ -2,6 +2,7 @@ package lv.smiltenesnkup.dvs.task.controller.web;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import lv.smiltenesnkup.dvs.calendar.service.CalendarService;
 import lv.smiltenesnkup.dvs.task.service.TaskService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -19,19 +20,23 @@ import org.springframework.web.bind.annotation.RequestParam;
 public class TaskWebController {
 
     private final TaskService taskService;
+    private final CalendarService calendarService;
 
     /**
-     * Atgriež "Mani Uzdevumi" un "Sekoju līdzi" skatu.
+     * Atgriež vienoto Lietotāja Galveno Paneli (Dashboard).
      * Parametrs 'user' tiek izmantots testēšanai, lai simulētu dažādus pieslēgušos lietotājus.
      */
     @GetMapping("/my-tasks")
     public String showMyTasks(@RequestParam(required = false, defaultValue = "Lietotājs") String user, Model model) {
-        log.info("Tiek atvērts uzdevumu skats lietotājam: {}", user);
+        log.info("Tiek atvērts Lietotāja Galvenais Panelis lietotājam: {}", user);
 
-        model.addAttribute("pageTitle", "Uzdevumi - DVS");
-        model.addAttribute("currentUser", user); // Lai UI redzētu, kura lietotāja datus skatām
+        model.addAttribute("pageTitle", "Galvenais Panelis - DVS");
+        model.addAttribute("currentUser", user);
 
-        // Piesaista abus sarakstus
+        // Piesaista kalendāra kategorijas
+        model.addAttribute("categories", calendarService.getActiveCategories());
+
+        // Piesaista abus uzdevumu sarakstus
         model.addAttribute("assignedTasks", taskService.getTasksForAssignee(user));
         model.addAttribute("followedTasks", taskService.getTasksForFollower(user));
 

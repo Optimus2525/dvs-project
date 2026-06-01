@@ -2,125 +2,214 @@
 <html lang="lv" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/base :: layout(~{::section})}">
 <body>
 <section>
+    <!-- GALVENE -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="h4 mb-0">
-            Uzdevumi
+            Lietotāja Galvenais Panelis
             <span class="badge bg-info text-dark ms-2 fs-6" id="currentUserBadge" th:text="${currentUser}"></span>
         </h2>
         <div class="d-flex gap-2">
-            <form action="/tasks/my-tasks" method="get" class="d-flex gap-2">
+            <form action="/tasks/my-tasks" method="get" class="d-flex gap-2 me-3">
                 <input type="text" name="user" id="currentTestUser" class="form-control form-control-sm" th:value="${currentUser}" placeholder="Ievadi vārdu testam">
                 <button type="submit" class="btn btn-sm btn-outline-secondary">Mainīt</button>
             </form>
-            <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createTaskModal">
-                + Pievienot Uzdevumu
-            </button>
+            <button class="btn btn-outline-primary btn-sm" onclick="openEditEventModal(null, new Date())">+ Jauns Notikums</button>
+            <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createTaskModal">+ Jauns Uzdevums</button>
         </div>
     </div>
 
-    <!-- Tabu navigācija -->
-    <ul class="nav nav-tabs mb-3" id="taskTabs" role="tablist">
-        <li class="nav-item" role="presentation">
-            <button class="nav-link active fw-bold" id="assigned-tab" data-bs-toggle="tab" data-bs-target="#assigned" type="button" role="tab" aria-controls="assigned" aria-selected="true">Mani uzdevumi</button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link fw-bold" id="followed-tab" data-bs-toggle="tab" data-bs-target="#followed" type="button" role="tab" aria-controls="followed" aria-selected="false">Sekoju līdzi</button>
-        </li>
-    </ul>
+    <!-- KALENDĀRA NAVIGĀCIJA -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="h5 mb-0 fw-bold" id="currentMonthLabel" style="min-width: 200px;">Jūnijs, 2026</h3>
+        <div class="d-flex gap-4">
+            <a href="#" class="text-decoration-none text-muted view-link d-flex align-items-center" data-view="day">Diena</a>
+            <a href="#" class="text-decoration-none text-primary fw-bold view-link d-flex align-items-center" data-view="week">Nedēļa</a>
+            <a href="#" class="text-decoration-none text-muted view-link d-flex align-items-center" data-view="month">Mēnesis</a>
+        </div>
+        <div class="d-flex align-items-center gap-2" style="min-width: 200px; justify-content: flex-end;">
+            <button class="btn btn-outline-secondary btn-sm" id="prevMonthBtn">&larr;</button>
+            <button class="btn btn-outline-secondary btn-sm" id="todayBtn">Šodien</button>
+            <button class="btn btn-outline-secondary btn-sm" id="nextMonthBtn">&rarr;</button>
+        </div>
+    </div>
 
-    <div class="tab-content" id="taskTabsContent">
+    <!-- KALENDĀRA GRID -->
+    <div class="calendar-wrapper shadow-sm mb-4" id="calendarWrapper">
+        <div class="calendar-header-row text-muted">
+            <div class="calendar-header-cell">Pr</div>
+            <div class="calendar-header-cell">Ot</div>
+            <div class="calendar-header-cell">Tr</div>
+            <div class="calendar-header-cell">Ce</div>
+            <div class="calendar-header-cell">Pk</div>
+            <div class="calendar-header-cell text-danger">Se</div>
+            <div class="calendar-header-cell text-danger">Sv</div>
+        </div>
+        <div class="calendar-grid" id="calendarGrid"></div>
+    </div>
 
-        <!-- Pirmā cilne: Mani uzdevumi -->
-        <div class="tab-pane fade show active" id="assigned" role="tabpanel" aria-labelledby="assigned-tab">
-            <div class="card shadow-sm border-top-0 rounded-top-0">
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle">
-                            <thead class="table-light">
-                            <tr>
-                                <th>Virsraksts</th>
-                                <th>Tips</th>
-                                <th>Izveidoja</th>
-                                <th>Izpildes datums</th>
-                                <th>Statuss / Apakšuzdevumi</th>
-                                <th>Termiņš</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            <tr th:each="task : ${assignedTasks}">
-                                <td class="w-25">
-                                    <a href="#" class="text-decoration-none fw-bold text-primary task-title-link"
-                                       th:data-id="${task.id}"
-                                       th:text="${task.title}"></a>
-                                </td>
+    <!-- UZDEVUMU BLOKI (Tiks paslēpti Dienas skatā) -->
+    <div id="tasksContainer">
 
-                                <!-- DROŠA TIPA PĀRBAUDE (Null-safe) -->
-                                <td>
-                                    <span class="badge bg-primary" th:if="${task.taskType == null or task.taskType.name() == 'REGULAR'}">Parasts</span>
-                                    <span class="badge bg-warning text-dark" th:if="${task.taskType != null and task.taskType.name() == 'COMPLEX_SEQUENTIAL'}">Secīgs</span>
-                                    <span class="badge bg-info text-dark" th:if="${task.taskType != null and task.taskType.name() == 'COMPLEX_PARALLEL'}">Paralēls</span>
-                                </td>
-
-                                <td th:text="${task.createdBy}"></td>
-
-                                <td th:text="${#temporals.format(task.dueDate, 'dd.MM.yyyy')}"></td>
-
-                                <!-- DROŠA STATUSA/APAKŠUZDEVUMU PĀRBAUDE (Null-safe) -->
-                                <td class="w-25">
-                                    <span th:if="${task.taskType == null or task.taskType.name() == 'REGULAR'}" class="badge bg-secondary" th:text="${task.status}"></span>
-
-                                    <!-- Apakšuzdevumu attēlošana kompleksajiem uzdevumiem -->
-                                    <div th:if="${task.taskType != null and task.taskType.name() != 'REGULAR'}" class="small">
-                                        <div th:each="st : ${task.subTasks}" class="mb-1 p-1 border rounded" th:classappend="${st.active ? 'bg-light border-primary' : 'text-muted'}">
-                                            <span class="fw-bold" th:text="${st.orderIndex} + '. ' + ${st.assignee}"></span> -
-                                            <span th:text="${st.status}" class="fst-italic"></span>
-                                        </div>
+        <!-- Mani Uzdevumi -->
+        <h5 class="fw-bold mb-3 text-primary">Mani Uzdevumi</h5>
+        <div class="card shadow-sm border-top-0 mb-4">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-bordered align-middle mb-0">
+                        <thead class="table-light">
+                        <tr>
+                            <!-- Fiksēts platums pirmajai kolonnai kā Lietvedības sarakstā -->
+                            <th style="width: 20%; min-width: 200px;">Virsraksts</th>
+                            <th>Tips</th>
+                            <th>Izveidoja</th>
+                            <th>Izpildes datums</th>
+                            <th>Statuss / Apakšuzdevumi</th>
+                            <th>Termiņš</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="task : ${assignedTasks}">
+                            <!-- Vārdu lūšana un normāls fonta biezums -->
+                            <td style="word-break: break-word;">
+                                <a href="#" class="text-decoration-none text-primary task-title-link" th:data-id="${task.id}" th:text="${task.title}"></a>
+                            </td>
+                            <td class="text-nowrap">
+                                <span class="badge bg-primary" th:if="${task.taskType == null or task.taskType.name() == 'REGULAR'}">Parasts</span>
+                                <span class="badge bg-warning text-dark" th:if="${task.taskType != null and task.taskType.name() == 'COMPLEX_SEQUENTIAL'}">Secīgs</span>
+                                <span class="badge bg-info text-dark" th:if="${task.taskType != null and task.taskType.name() == 'COMPLEX_PARALLEL'}">Paralēls</span>
+                            </td>
+                            <td th:text="${task.createdBy}"></td>
+                            <td th:text="${#temporals.format(task.dueDate, 'dd.MM.yyyy')}"></td>
+                            <td class="w-25">
+                                <span th:if="${task.taskType == null or task.taskType.name() == 'REGULAR'}" class="badge bg-secondary" th:text="${task.status}"></span>
+                                <div th:if="${task.taskType != null and task.taskType.name() != 'REGULAR'}" class="small">
+                                    <div th:each="st : ${task.subTasks}" class="mb-1 p-1 border rounded" th:classappend="${st.active ? 'bg-light border-primary' : 'text-muted'}">
+                                        <span class="fw-bold" th:text="${st.orderIndex} + '. ' + ${st.assignee}"></span> - <span th:text="${st.status}" class="fst-italic"></span>
                                     </div>
-                                </td>
-
-                                <td>
-                                    <th:block th:with="daysLeft=${T(java.time.temporal.ChronoUnit).DAYS.between(#temporals.createToday(), task.dueDate)}">
-                                        <span th:if="${daysLeft < 0}" class="text-danger fw-bold">Termiņš nokavēts</span>
-                                        <span th:if="${daysLeft == 0}" class="text-success fw-bold">Termiņš šodien</span>
-                                        <span th:if="${daysLeft > 0 and daysLeft < 5}" class="text-danger fw-bold">Termiņš tuvojas</span>
-                                        <span th:if="${daysLeft >= 5}" class="text-muted" th:text="${daysLeft + ' dienas atlikušas'}"></span>
-                                    </th:block>
-                                </td>
-                            </tr>
-                            <tr th:if="${#lists.isEmpty(assignedTasks)}">
-                                <td colspan="6" class="text-center text-muted py-4">Jums šobrīd nav piešķirtu uzdevumu.</td>
-                            </tr>
-                            </tbody>
-                        </table>
-                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <th:block th:with="daysLeft=${T(java.time.temporal.ChronoUnit).DAYS.between(#temporals.createToday(), task.dueDate)}">
+                                    <span th:if="${daysLeft < 0}" class="text-danger fw-bold">Nokavēts</span>
+                                    <span th:if="${daysLeft == 0}" class="text-success fw-bold">Šodien</span>
+                                    <span th:if="${daysLeft > 0 and daysLeft < 5}" class="text-danger fw-bold">Tuvojas</span>
+                                    <span th:if="${daysLeft >= 5}" class="text-muted" th:text="${daysLeft + ' dienas'}"></span>
+                                </th:block>
+                            </td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(assignedTasks)}">
+                            <td colspan="6" class="text-center text-muted py-4">Jums šobrīd nav piešķirtu uzdevumu.</td>
+                        </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
 
-        <!-- Otrā cilne: Sekoju līdzi (paslēpta īsuma labad, struktūra tāda pati kā iepriekš) -->
-        <div class="tab-pane fade" id="followed" role="tabpanel" aria-labelledby="followed-tab">
-            <div class="card shadow-sm border-top-0 rounded-top-0">
-                <div class="card-body text-center text-muted py-4">
-                    Šeit parādīsies uzdevumi, kuriem Jūs sekojat.
+        <!-- Sekoju Līdzi -->
+        <h5 class="fw-bold mb-3 text-primary">Sekoju līdzi</h5>
+        <div class="card shadow-sm border-top-0 mb-4">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-bordered align-middle mb-0">
+                        <thead class="table-light">
+                        <tr>
+                            <!-- Fiksēts platums pirmajai kolonnai -->
+                            <th style="width: 20%; min-width: 200px;">Virsraksts</th>
+                            <th>Tips</th>
+                            <th>Atbildīgais</th>
+                            <th>Izpildes datums</th>
+                            <th>Statuss</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="task : ${followedTasks}">
+                            <!-- Vārdu lūšana un normāls fonta biezums -->
+                            <td style="word-break: break-word;">
+                                <a href="#" class="text-decoration-none text-primary task-title-link" th:data-id="${task.id}" th:text="${task.title}"></a>
+                            </td>
+                            <td class="text-nowrap">
+                                <span class="badge bg-primary" th:if="${task.taskType == null or task.taskType.name() == 'REGULAR'}">Parasts</span>
+                                <span class="badge bg-warning text-dark" th:if="${task.taskType != null and task.taskType.name() == 'COMPLEX_SEQUENTIAL'}">Secīgs</span>
+                                <span class="badge bg-info text-dark" th:if="${task.taskType != null and task.taskType.name() == 'COMPLEX_PARALLEL'}">Paralēls</span>
+                            </td>
+                            <td th:text="${task.assignee}"></td>
+                            <td th:text="${#temporals.format(task.dueDate, 'dd.MM.yyyy')}"></td>
+                            <td><span class="badge bg-secondary" th:text="${task.status}"></span></td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(followedTasks)}">
+                            <td colspan="5" class="text-center text-muted py-4">Šobrīd nav uzdevumu, kuriem Jūs sekojat.</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- MODĀLAIS LOGS: Notikums -->
+    <div class="modal fade" id="eventModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title fw-bold" id="eventModalTitle">Notikums</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="eventForm">
+                        <input type="hidden" id="eventId">
+                        <div id="eventAlert" class="alert alert-danger d-none"></div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Virsraksts <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="eventTitle" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Kategorija <span class="text-danger">*</span></label>
+                            <select class="form-select" id="eventCategory" required>
+                                <option value="">-- Izvēlieties --</option>
+                                <option th:each="cat : ${categories}" th:value="${cat.id}" th:text="${cat.name}"></option>
+                            </select>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="eventAllDay">
+                            <label class="form-check-label fw-bold" for="eventAllDay">Visas dienas notikums</label>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Sākums <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="eventStart" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Beigas <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="eventEnd" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Apraksts</label>
+                            <textarea class="form-control" id="eventDesc" rows="3"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Atcelt</button>
+                    <button type="button" class="btn btn-primary" id="saveEventBtn">Saglabāt</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Modālais logs jauna uzdevuma izveidei -->
-    <div class="modal fade" id="createTaskModal" tabindex="-1" aria-labelledby="createTaskModalLabel" aria-hidden="true">
+    <!-- MODĀLAIS LOGS: Jauns Uzdevums -->
+    <div class="modal fade" id="createTaskModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title" id="createTaskModalLabel">Jauns Uzdevums</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Aizvērt"></button>
+                    <h5 class="modal-title">Jauns Uzdevums</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <!-- Kļūdu paziņojumu bloks -->
-                    <div id="createTaskAlert" class="alert alert-danger d-none" role="alert"></div>
+                    <div id="createTaskAlert" class="alert alert-danger d-none"></div>
                     <form id="taskForm">
-
-                        <!-- Uzdevuma tips (Pārslēdzējs) -->
                         <div class="mb-3 bg-light p-3 border rounded">
                             <label class="form-label fw-bold text-primary">Uzdevuma Veids <span class="text-danger">*</span></label>
                             <select class="form-select border-primary" id="taskType" required>
@@ -128,101 +217,84 @@
                                 <option value="COMPLEX_SEQUENTIAL">Secīgais kompleksais uzdevums</option>
                                 <option value="COMPLEX_PARALLEL">Paralēlais kompleksais uzdevums</option>
                             </select>
-                            <small class="text-muted mt-1 d-block" id="taskTypeHint">Viens atbildīgais, vienkārša izpilde.</small>
                         </div>
-
                         <div class="mb-3">
                             <label class="form-label fw-bold">Virsraksts <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="taskTitle" required>
                         </div>
-
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">Sākuma datums <span class="text-danger">*</span></label>
-                                <!-- Nomainīts uz type="text" -->
-                                <input type="text" class="form-control date-input" id="taskStartDate" required>
+                                <input type="text" class="form-control" id="taskStartDate" required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">Izpildes datums <span class="text-danger">*</span></label>
-                                <!-- Nomainīts uz type="text" -->
-                                <input type="text" class="form-control date-input" id="taskDueDate" required>
+                                <input type="text" class="form-control" id="taskDueDate" required>
                             </div>
                         </div>
-
-                        <!-- Galvenā atbildīgā persona (Paslēpta kompleksajiem uzdevumiem) -->
                         <div class="row mb-3" id="mainAssigneeContainer">
                             <div class="col-md-6">
-                                <label class="form-label fw-bold">Atbildīgā persona <span class="text-danger">*</span></label>
+                                <label class="form-label fw-bold">Atbildīgais <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" id="taskAssignee" list="assigneeList" autocomplete="off">
                                 <datalist id="assigneeList"></datalist>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">Seko līdzi</label>
-                                <input type="text" class="form-control" id="taskFollowerInput" list="followerList" autocomplete="off" placeholder="Rakstiet vārdu un spiediet Enter">
+                                <input type="text" class="form-control" id="taskFollowerInput" list="followerList" placeholder="Vārds + Enter">
                                 <datalist id="followerList"></datalist>
                                 <div id="followersPills" class="mt-2"></div>
                             </div>
                         </div>
-
                         <div class="mb-3">
                             <label class="form-label fw-bold">Apraksts <span class="text-danger">*</span></label>
                             <textarea class="form-control" id="taskDescription" rows="3" required></textarea>
                         </div>
-
                         <hr>
-
-                        <!-- APAKŠUZDEVUMU KONTEINERS -->
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <label class="form-label fw-bold mb-0">Apakšuzdevumi</label>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" id="addSubtaskBtn">+ Pievienot Apakšuzdevumu</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="addSubtaskBtn">+ Pievienot</button>
                         </div>
                         <div id="subtasksContainer"></div>
-
                     </form>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Atcelt</button>
-                    <button type="button" class="btn btn-success" id="saveTaskBtn">Saglabāt Uzdevumu</button>
+                    <button type="button" class="btn btn-success" id="saveTaskBtn">Saglabāt</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Modālais logs Uzdevuma rediģēšanai -->
-    <div class="modal fade" id="editTaskModal" tabindex="-1" aria-labelledby="editTaskModalLabel" aria-hidden="true">
+    <!-- MODĀLAIS LOGS: Rediģēt Uzdevumu -->
+    <div class="modal fade" id="editTaskModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header bg-secondary text-white">
-                    <h5 class="modal-title" id="editTaskModalLabel">Uzdevuma Informācija</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Aizvērt"></button>
+                    <h5 class="modal-title">Uzdevuma Informācija</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div id="editTaskAlert" class="alert alert-danger d-none" role="alert"></div>
-
+                    <div id="editTaskAlert" class="alert alert-danger d-none"></div>
                     <form id="editTaskForm">
                         <input type="hidden" id="editTaskId">
-
                         <div class="mb-3">
                             <label class="form-label fw-bold">Virsraksts</label>
                             <input type="text" class="form-control" id="editTaskTitle" required>
                         </div>
-
                         <div class="row mb-3">
                             <div class="col-md-6">
-                                <label class="form-label fw-bold">Sākuma datums</label>
-                                <input type="text" class="form-control date-input" id="editTaskStartDate" required>
+                                <label class="form-label fw-bold">Sākums</label>
+                                <input type="text" class="form-control" id="editTaskStartDate" required>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label fw-bold">Izpildes datums</label>
-                                <input type="text" class="form-control date-input" id="editTaskDueDate" required>
+                                <label class="form-label fw-bold">Izpilde</label>
+                                <input type="text" class="form-control" id="editTaskDueDate" required>
                             </div>
                         </div>
-
                         <div class="mb-3">
                             <label class="form-label fw-bold">Apraksts</label>
                             <textarea class="form-control" id="editTaskDescription" rows="3" required></textarea>
                         </div>
-
                         <hr>
                         <h6 class="fw-bold">Apakšuzdevumi</h6>
                         <div id="editSubtasksContainer" class="mt-3"></div>
@@ -236,500 +308,11 @@
         </div>
     </div>
 
-    <!-- TOAST (POPOVER) KONTEINERS PAZIŅOJUMIEM -->
-    <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer" style="z-index: 1055;">
-        <!-- Toasti tiks ģenerēti šeit ar JS -->
-    </div>
-
-    <!-- Vanilla JS Loģika -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const currentUser = document.getElementById('currentTestUser').value;
-
-            // --- 1. DATUMI ---
-            const startPicker = flatpickr("#taskStartDate", { locale: "lv", altInput: true, altFormat: "d.m.Y", dateFormat: "Y-m-d", minDate: "today" });
-            const duePicker = flatpickr("#taskDueDate", { locale: "lv", altInput: true, altFormat: "d.m.Y", dateFormat: "Y-m-d", minDate: "today" });
-
-
-            // --- LIETOTĀJU MEKLĒŠANA UN SEKOTĀJU LOĢIKA ---
-            let selectedFollowers = [];
-            const followerInput = document.getElementById('taskFollowerInput');
-            const followersPills = document.getElementById('followersPills');
-
-            // Autocomplete (Fetch API) funkcija
-            function setupUserSearch(inputId, dataListId) {
-                const input = document.getElementById(inputId);
-                const dataList = document.getElementById(dataListId);
-                if (!input) return;
-
-                input.addEventListener('input', function() {
-                    const query = this.value.trim();
-                    if (query.length < 2) return;
-
-                    fetch(`/api/v1/tasks/users/search?query=${encodeURIComponent(query)}`)
-                        .then(res => res.json())
-                        .then(users => {
-                            dataList.innerHTML = '';
-                            users.forEach(user => {
-                                const option = document.createElement('option');
-                                option.value = user;
-                                dataList.appendChild(option);
-                            });
-                        });
-                });
-            }
-
-            // Inicializē autocomplete laukiem
-            setupUserSearch('taskAssignee', 'assigneeList');
-            setupUserSearch('taskFollowerInput', 'followerList');
-
-            // Funkcija vizuālās "birkas" (badge) pievienošanai
-            function addFollower(val) {
-                val = val.trim();
-                if (val && !selectedFollowers.includes(val)) {
-                    selectedFollowers.push(val);
-
-                    const badge = document.createElement('span');
-                    badge.className = 'badge bg-info text-dark me-2 mb-2 p-2';
-                    badge.innerHTML = `${val} <span class="ms-2 cursor-pointer text-danger fw-bold" style="cursor:pointer;">&times;</span>`;
-
-                    // Noņemšanas loģika
-                    badge.querySelector('span').addEventListener('click', function() {
-                        selectedFollowers = selectedFollowers.filter(f => f !== val);
-                        badge.remove();
-                    });
-
-                    followersPills.appendChild(badge);
-                }
-                followerInput.value = ''; // Notīra ievades lauku
-            }
-
-            // Pievieno sekotāju, nospiežot "Enter"
-            followerInput.addEventListener('keydown', function(e) {
-                if (e.key === 'Enter') {
-                    e.preventDefault(); // Novērš formas iesniegšanu (lapas pārlādi)
-                    addFollower(this.value);
-                }
-            });
-
-            // Pievieno sekotāju, ja lietotājs to izvēlas no Datalist (peles klikšķis)
-            followerInput.addEventListener('change', function() {
-                addFollower(this.value);
-            });
-
-
-            // --- 2. UZDEVUMA TIPA PĀRSLĒGŠANA ---
-            const taskTypeSelect = document.getElementById('taskType');
-            const taskTypeHint = document.getElementById('taskTypeHint');
-            const mainAssigneeContainer = document.getElementById('mainAssigneeContainer');
-            const taskAssigneeInput = document.getElementById('taskAssignee');
-            const subtasksContainer = document.getElementById('subtasksContainer');
-            const addSubtaskBtn = document.getElementById('addSubtaskBtn');
-            let subtaskCount = 0;
-
-            taskTypeSelect.addEventListener('change', function() {
-                subtasksContainer.innerHTML = ''; // Notīra esošos
-                subtaskCount = 0;
-                addSubtaskBtn.style.display = 'inline-block';
-
-                if (this.value === 'REGULAR') {
-                    taskTypeHint.innerText = "Viens atbildīgais, vienkārša izpilde.";
-                    mainAssigneeContainer.style.display = 'flex';
-                    taskAssigneeInput.required = true;
-                } else {
-                    taskTypeHint.innerText = this.value === 'COMPLEX_SEQUENTIAL' ?
-                        "Uzdevumi tiek pildīti secīgi (viens pēc otra). Minimāli 2, maksimāli 3." :
-                        "Uzdevumi tiek pildīti paralēli (vienlaicīgi). Minimāli 2, maksimāli 3.";
-
-                    mainAssigneeContainer.style.display = 'none'; // Paslēpj galveno atbildīgo
-                    taskAssigneeInput.required = false;
-                    taskAssigneeInput.value = currentUser; // Izveidotājs automātiski kļūst par galveno atbildīgo
-
-                    // Automātiski pievieno 2 obligātos laukus
-                    addSubtaskBtn.click();
-                    addSubtaskBtn.click();
-                }
-            });
-
-            // --- 3. APAKŠUZDEVUMU ĢENERATORS ---
-            addSubtaskBtn.addEventListener('click', function() {
-                const isComplex = taskTypeSelect.value !== 'REGULAR';
-                const maxCount = isComplex ? 3 : 10; // Parastajiem ļaujam vairāk, kompleksajiem 3
-
-                if (subtaskCount >= maxCount) {
-                    alert(`Maksimālais apakšuzdevumu skaits šim tipam ir ${maxCount}.`);
-                    return;
-                }
-
-                const row = document.createElement('div');
-                row.className = 'card mb-3 border-info subtask-row';
-
-                if (isComplex) {
-                    // Kompleksā uzdevuma forma
-                    row.innerHTML = `
-                        <div class="card-body bg-light">
-                            <div class="d-flex justify-content-between mb-2">
-                                <h6 class="fw-bold text-info">Apakšuzdevums ${subtaskCount + 1}</h6>
-                                <button class="btn btn-sm btn-outline-danger remove-subtask-btn" type="button">&times; Dzēst</button>
-                            </div>
-                            <div class="row mb-2">
-                                <div class="col-md-6">
-                                    <label class="small fw-bold">Atbildīgais</label>
-                                    <input type="text" class="form-control form-control-sm subtask-assignee" required>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="small fw-bold">Izpildes datums</label>
-                                    <input type="date" class="form-control form-control-sm subtask-date" required>
-                                </div>
-                            </div>
-                            <textarea class="form-control form-control-sm subtask-desc" placeholder="Apakšuzdevuma apraksts..." rows="2" required></textarea>
-                        </div>
-                    `;
-                } else {
-                    // Parastā uzdevuma forma
-                    row.innerHTML = `
-                        <div class="input-group">
-                            <input type="text" class="form-control subtask-title" placeholder="Vienkāršs apakšuzdevums" required>
-                            <button class="btn btn-outline-danger remove-subtask-btn" type="button">Dzēst</button>
-                        </div>
-                    `;
-                }
-
-                subtasksContainer.appendChild(row);
-                subtaskCount++;
-
-                if (isComplex) {
-                    // Inicializē Flatpickr jaunajam laukam
-                    flatpickr(row.querySelector('.subtask-date'), { locale: "lv", altInput: true, altFormat: "d.m.Y", dateFormat: "Y-m-d", minDate: "today" });
-                }
-
-                if (subtaskCount >= maxCount) addSubtaskBtn.style.display = 'none';
-
-                row.querySelector('.remove-subtask-btn').addEventListener('click', function() {
-                    row.remove();
-                    subtaskCount--;
-                    addSubtaskBtn.style.display = 'inline-block';
-                });
-            });
-
-            // --- 4. DATU SAGLABĀŠANA ---
-            document.getElementById('saveTaskBtn').addEventListener('click', async function() {
-
-                const form = document.getElementById('taskForm');
-                if (!form.checkValidity()) {
-                    form.reportValidity();
-                    return;
-                }
-
-                const type = taskTypeSelect.value;
-                const isComplex = type !== 'REGULAR';
-
-                if (isComplex && subtaskCount < 2) {
-                    alert("Kompleksajam uzdevumam nepieciešami vismaz 2 apakšuzdevumi!");
-                    return;
-                }
-
-                // Pievieno arī to sekotāju, kas ir ierakstīts laukā, bet nav nospiests Enter
-                const pendingFollower = document.getElementById('taskFollowerInput').value.trim();
-                if (pendingFollower && !selectedFollowers.includes(pendingFollower)) {
-                    selectedFollowers.push(pendingFollower);
-                }
-
-                // Palīgfunkcija datumu pārveidošanai uz ISO standartu (yyyy-MM-dd),
-                // ko saprot Java Backend, neatkarīgi no tā, kā to atgriež UI.
-                const formatToISO = (dateStr) => {
-                    if (!dateStr) return null;
-                    if (dateStr.includes('-')) return dateStr; // Jau ir pareizā formātā
-                    const parts = dateStr.split('.');
-                    if (parts.length === 3) return `${parts[2]}-${parts[1]}-${parts[0]}`;
-                    return dateStr;
-                };
-
-                // Sastāda DTO
-                const payload = {
-                    taskType: type,
-                    title: document.getElementById('taskTitle').value,
-                    startDate: formatToISO(document.getElementById('taskStartDate').value),
-                    dueDate: formatToISO(document.getElementById('taskDueDate').value),
-                    assignee: isComplex ? currentUser : document.getElementById('taskAssignee').value,
-                    createdBy: currentUser, // Pievieno izveidotāju
-                    followers: selectedFollowers,
-                    description: document.getElementById('taskDescription').value,
-                    priority: "NORMAL",
-                    status: "Nav sākts",
-                    subTasks: []
-                };
-
-                document.querySelectorAll('.subtask-row').forEach(row => {
-                    if (isComplex) {
-                        payload.subTasks.push({
-                            title: `Apakšuzdevums`,
-                            assignee: row.querySelector('.subtask-assignee').value,
-                            dueDate: formatToISO(row.querySelector('.subtask-date').value),
-                            description: row.querySelector('.subtask-desc').value
-                        });
-                    } else {
-                        const title = row.querySelector('.subtask-title').value;
-                        if (title) payload.subTasks.push({ title: title });
-                    }
-                });
-
-                // Sūta uz serveri
-                try {
-                    const response = await fetch('/api/v1/tasks', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-
-                    if (!response.ok) {
-                        const errorData = await response.text();
-                        console.error("Backend atbilde:", errorData);
-                        const alertBox = document.getElementById('createTaskAlert');
-                        alertBox.innerText = "Kļūda saglabājot! " + errorData.substring(0, 150);
-                        alertBox.classList.remove('d-none');
-                        return;
-                    }
-
-                    window.location.reload();
-                } catch (err) {
-                    const alertBox = document.getElementById('createTaskAlert');
-                    alertBox.innerText = "Sistēmas kļūda: " + err.message;
-                    alertBox.classList.remove('d-none');
-                }
-            });
-
-            // --- 5. UZDEVUMA REDIĢĒŠANAS LOĢIKA (RBAC UN VIENOTĀ SAGLABĀŠANA) ---
-            const editStartPicker = flatpickr("#editTaskStartDate", { locale: "lv", altInput: true, altFormat: "d.m.Y", dateFormat: "Y-m-d" });
-            const editDuePicker = flatpickr("#editTaskDueDate", { locale: "lv", altInput: true, altFormat: "d.m.Y", dateFormat: "Y-m-d" });
-            const editModal = new bootstrap.Modal(document.getElementById('editTaskModal'));
-
-            document.querySelectorAll('.task-title-link').forEach(link => {
-                link.addEventListener('click', async function(e) {
-                    e.preventDefault();
-                    const taskId = this.getAttribute('data-id');
-                    document.getElementById('editTaskAlert').classList.add('d-none');
-
-                    try {
-                        const res = await fetch(`/api/v1/tasks/${taskId}`);
-                        const task = await res.json();
-
-                        document.getElementById('editTaskId').value = task.id;
-                        document.getElementById('editTaskTitle').value = task.title;
-                        document.getElementById('editTaskDescription').value = task.description;
-                        editStartPicker.setDate(task.startDate);
-                        editDuePicker.setDate(task.dueDate);
-
-                        // Pārbauda tiesības (RBAC) - Ja nav izveidotājs, pamatlaukus atspējo
-                        const isCreator = (task.assignee === currentUser);
-                        const mainFields = ['editTaskTitle', 'editTaskDescription', 'editTaskStartDate', 'editTaskDueDate'];
-
-                        mainFields.forEach(fieldId => {
-                            const el = document.getElementById(fieldId);
-                            if (el.classList.contains('flatpickr-input')) {
-                                el.nextElementSibling.disabled = !isCreator;
-                            } else {
-                                el.disabled = !isCreator;
-                            }
-                        });
-
-                        let hasEditableFields = isCreator;
-
-                        // Ģenerē apakšuzdevumu skatu
-                        const subContainer = document.getElementById('editSubtasksContainer');
-                        subContainer.innerHTML = '';
-
-                        if (task.subTasks && task.subTasks.length > 0) {
-                            task.subTasks.forEach(st => {
-                                const isSubtaskAssignee = (st.assignee === currentUser);
-                                const isEditable = isSubtaskAssignee && st.active;
-                                const isFirstSequential = (task.taskType === 'COMPLEX_SEQUENTIAL' && st.orderIndex === 1);
-
-                                if (isEditable) hasEditableFields = true;
-
-                                const stHtml = `
-                                    <div class="card mb-2 border-secondary subtask-card" data-id="${st.id}" data-order="${st.orderIndex}">
-                                        <div class="card-body p-2 bg-light">
-                                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                                <span class="fw-bold small">${st.orderIndex}. ${st.title} (${st.assignee})</span>
-                                                <span class="badge ${st.active ? 'bg-primary' : 'bg-secondary'}">${st.status}</span>
-                                            </div>
-                                            <textarea class="form-control form-control-sm mb-2" id="stDesc_${st.id}" ${isEditable ? '' : 'disabled'} data-original-disabled="${!isEditable}">${st.description || ''}</textarea>
-                                            ${isEditable ? `
-                                                <select class="form-select form-select-sm status-changer-modal" data-id="${st.id}">
-                                                    <option value="${st.status}" hidden>${st.status}</option>
-                                                    <option value="Notiek izpilde" ${st.status === 'Notiek izpilde' ? 'selected' : ''}>Notiek izpilde</option>
-                                                    ${!isFirstSequential ? `<option value="Atgriezts labošanai" ${st.status === 'Atgriezts labošanai' ? 'selected' : ''}>Atgriezts labošanai</option>` : ''}
-                                                    <option value="Pabeigts" ${st.status === 'Pabeigts' ? 'selected' : ''}>Pabeigts</option>
-                                                </select>
-                                            ` : ''}
-                                        </div>
-                                    </div>
-                                `;
-                                subContainer.insertAdjacentHTML('beforeend', stHtml);
-                            });
-                        } else {
-                            subContainer.innerHTML = '<span class="text-muted small">Nav apakšuzdevumu</span>';
-                        }
-
-                        document.getElementById('updateTaskBtn').style.display = hasEditableFields ? 'inline-block' : 'none';
-                        editModal.show();
-
-                    } catch (err) {
-                        console.error("Kļūda ielādējot uzdevumu:", err);
-                    }
-                });
-            });
-
-            // Dinamiskā "Atgriezt labošanai" loģika bez prompt()
-            document.addEventListener('change', function(e) {
-                if (e.target && e.target.classList.contains('status-changer-modal')) {
-                    const newStatus = e.target.value;
-                    const card = e.target.closest('.subtask-card');
-                    const currentOrder = parseInt(card.getAttribute('data-order'));
-
-                    const prevCard = document.querySelector(`.subtask-card[data-order="${currentOrder - 1}"]`);
-
-                    if (prevCard) {
-                        const prevTextarea = prevCard.querySelector('textarea');
-
-                        if (newStatus === "Atgriezts labošanai") {
-                            // Aktivizē iepriekšējo textarea un pievieno norādi
-                            prevTextarea.disabled = false;
-                            if (!prevTextarea.value.includes('[Atgriešanas iemesls]:')) {
-                                prevTextarea.value += (prevTextarea.value ? '\n\n' : '') + '[Atgriešanas iemesls]: ';
-                            }
-                            prevTextarea.focus();
-                        } else {
-                            // Ja lietotājs pārdomā, atjauno sākotnējo atspējojuma stāvokli
-                            if (prevTextarea.getAttribute('data-original-disabled') === 'true') {
-                                prevTextarea.disabled = true;
-                            }
-                        }
-                    }
-                }
-            });
-
-            // Vienotā saglabāšanas loģika visam modālajam logam
-            document.getElementById('updateTaskBtn').addEventListener('click', async function() {
-                const id = document.getElementById('editTaskId').value;
-                const requests = []; // Aizstāts no promises uz requests objektu masīvu
-
-                // 1. Tiek saglabāti pamatdati
-                if (!document.getElementById('editTaskTitle').disabled) {
-                    const payload = {
-                        title: document.getElementById('editTaskTitle').value,
-                        description: document.getElementById('editTaskDescription').value,
-                        startDate: document.getElementById('editTaskStartDate').value,
-                        dueDate: document.getElementById('editTaskDueDate').value
-                    };
-                    requests.push({ url: `/api/v1/tasks/${id}`, body: payload });
-                }
-
-                // 2. Tiek savākti apakšuzdevumu dati (statuss un/vai apraksts)
-                document.querySelectorAll('.subtask-card').forEach(card => {
-                    const stId = card.getAttribute('data-id');
-                    const select = card.querySelector('.status-changer-modal');
-                    const textarea = document.getElementById(`stDesc_${stId}`);
-
-                    let payload = {};
-                    let hasChanges = false;
-
-                    // Nolasa statusu, ja select eksistē un nav atspējots
-                    if (select && !select.disabled) {
-                        payload.status = select.value;
-                        hasChanges = true;
-                    }
-
-                    // Nolasa aprakstu, ja textarea nav atspējots
-                    if (textarea && !textarea.disabled) {
-                        payload.description = textarea.value;
-                        hasChanges = true;
-                    }
-
-                    if (hasChanges) {
-                        requests.push({ url: `/api/v1/tasks/subtasks/${stId}`, body: payload });
-                    }
-                });
-
-                if (requests.length === 0) {
-                    editModal.hide();
-                    return;
-                }
-
-                try {
-                    // Tiek sūtīti pieprasījumi secīgi (viens pēc otra), lai novērstu "Race Condition" datubāzē
-                    for (const req of requests) {
-                        const res = await fetch(req.url, {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(req.body)
-                        });
-
-                        if (!res.ok) {
-                            const errorData = await res.text();
-                            throw new Error(errorData.substring(0, 150));
-                        }
-                    }
-
-                    // Pēc veiksmīgas visu pieprasījumu apstrādes lapa tiek pārlādēta
-                    window.location.reload();
-                } catch (err) {
-                    const alertBox = document.getElementById('editTaskAlert');
-                    alertBox.innerText = "Kļūda saglabājot! " + err.message;
-                    alertBox.classList.remove('d-none');
-                }
-            });
-
-            // --- 6. POPOVER (TOAST) PAZIŅOJUMU MEHĀNISMS AR POGU ---
-            function fetchNotifications() {
-                fetch(`/api/v1/tasks/notifications?user=${encodeURIComponent(currentUser)}`)
-                    .then(res => res.json())
-                    .then(notifications => {
-                        const container = document.getElementById('toastContainer');
-                        notifications.forEach(notif => {
-                            if (!document.getElementById(`toast-${notif.id}`)) {
-                                const toastEl = document.createElement('div');
-                                toastEl.className = 'toast border-primary shadow';
-                                toastEl.id = `toast-${notif.id}`;
-                                toastEl.setAttribute('role', 'alert');
-                                toastEl.setAttribute('aria-live', 'assertive');
-                                toastEl.setAttribute('aria-atomic', 'true');
-                                toastEl.innerHTML = `
-                                    <div class="toast-header bg-primary text-white">
-                                        <strong class="me-auto">DVS Paziņojums</strong>
-                                        <button type="button" class="btn-close btn-close-white close-toast" data-id="${notif.id}"></button>
-                                    </div>
-                                    <div class="toast-body">
-                                        <div class="fw-bold mb-3">${notif.message}</div>
-                                        <div class="text-end">
-                                            <button type="button" class="btn btn-sm btn-primary read-toast-btn" data-id="${notif.id}">Esmu iepazinies</button>
-                                        </div>
-                                    </div>
-                                `;
-                                container.appendChild(toastEl);
-
-                                const bsToast = new bootstrap.Toast(toastEl, { autohide: false });
-                                bsToast.show();
-
-                                const markAsRead = function() {
-                                    const id = this.getAttribute('data-id');
-                                    fetch(`/api/v1/tasks/notifications/${id}/read`, { method: 'POST' });
-                                    bsToast.hide();
-                                    setTimeout(() => toastEl.remove(), 500);
-                                };
-
-                                toastEl.querySelector('.close-toast').addEventListener('click', markAsRead);
-                                toastEl.querySelector('.read-toast-btn').addEventListener('click', markAsRead);
-                            }
-                        });
-                    });
-            }
-
-            setInterval(fetchNotifications, 300000);
-            fetchNotifications();
-        });
-    </script>
+    <!-- TOAST KONTEINERS -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer" style="z-index: 1055;"></div>
+
+    <!-- Ārējais JS fails -->
+    <script th:src="@{/js/dashboard.js}"></script>
 </section>
 </body>
 </html>

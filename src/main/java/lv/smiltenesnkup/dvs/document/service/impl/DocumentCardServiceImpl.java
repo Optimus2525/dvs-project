@@ -36,6 +36,7 @@ public class DocumentCardServiceImpl implements DocumentCardService {
     private final DocumentFileRepository documentFileRepository;
     private final DocumentFileMapper documentFileMapper;
 
+
     @Override
     @Transactional
     public DocumentCardDTO createDocumentCard(DocumentCardDTO dto) {
@@ -55,14 +56,16 @@ public class DocumentCardServiceImpl implements DocumentCardService {
         return documentCardMapper.toDto(savedEntity);
     }
 
+
     @Override
     @Transactional(readOnly = true)
     public List<DocumentCardDTO> getCardsByListId(Long listId) {
-        log.info("Fetching all document cards for list ID: {}", listId);
-        return documentCardRepository.findAllByDocumentListId(listId).stream()
+        log.info("Fetching all document cards for list ID: {} ordered by newest first", listId);
+        return documentCardRepository.findAllByDocumentListIdOrderByCreatedAtDesc(listId).stream()
                 .map(documentCardMapper::toDto)
                 .collect(Collectors.toList());
     }
+
 
     @Override
     @Transactional(readOnly = true)
@@ -72,6 +75,7 @@ public class DocumentCardServiceImpl implements DocumentCardService {
                 .orElseThrow(() -> new ResourceNotFoundException("Dokumenta kartīte nav atrasta ar ID: " + id));
         return documentCardMapper.toDto(entity);
     }
+
 
     @Override
     @Transactional(readOnly = true)

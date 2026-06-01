@@ -27,19 +27,25 @@
         }
     </style>
 
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex justify-content-between align-items-end mb-2">
         <h2 class="h4 mb-0">Ienākošā korespondence 2026</h2>
+        <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#newCardModal">
+            + Pievienot jaunu ierakstu
+        </button>
     </div>
 
     <div class="row">
-        <div class="col-lg-8">
-            <div class="card shadow-sm">
-                <div class="card-body">
+        <!-- Tabula tagad aizņem visu platumu (col-12) -->
+        <div class="col-12">
+            <div class="card shadow-sm border-top-0">
+                <div class="card-body p-0">
                     <div class="table-responsive">
-                        <table class="table table-hover table-bordered align-middle text-nowrap">
+                        <!-- Noņemts text-nowrap, lai gari virsraksti varētu lūzt jaunā rindā -->
+                        <table class="table table-hover table-bordered align-middle mb-0">
                             <thead class="table-light">
                             <tr>
-                                <th>Virsraksts / Apraksts</th>
+                                <!-- Fiksēts 20% platums pirmajai kolonnai -->
+                                <th style="width: 20%; min-width: 200px;">Virsraksts / Apraksts</th>
                                 <th>Numurs</th>
 
                                 <!-- DINAMISKĀS KOLONNAS (Virsraksti) -->
@@ -50,17 +56,20 @@
                             </tr>
                             </thead>
                             <tbody>
-                            <!-- DOKUMENTU DATI -->
+                            <!-- DOKUMENTU DATI (Sakārtoti no jaunākā uz vecāko) -->
                             <tr th:each="card : ${documentCards}">
-                                <td>
+                                <!-- word-break nodrošina, ka pat viens ļoti garš vārds nesalauzīs platumu -->
+                                <td style="word-break: break-word;">
+                                    <!-- Noņemts fw-bold, lai teksts būtu normālā biezumā -->
                                     <a th:href="@{'/documents/cards/' + ${card.id}}"
-                                       class="text-decoration-none fw-bold text-primary"
+                                       class="text-decoration-none text-primary"
                                        th:text="${card.title}"></a>
                                 </td>
-                                <td><span class="text-muted" th:text="${card.documentNumber}"></span></td>
+                                <!-- Pārējām kolonnām atgriežam text-nowrap, lai datumi un numuri neietu divās rindās -->
+                                <td class="text-nowrap"><span class="text-muted" th:text="${card.documentNumber}"></span></td>
 
                                 <!-- DINAMISKĀS VĒRTĪBAS NO JSONB AR FORMATĒŠANU -->
-                                <td th:each="field : ${dynamicFields}">
+                                <td class="text-nowrap" th:each="field : ${dynamicFields}">
                                     <th:block th:if="${card.metadata != null and card.metadata[field.name] != null and card.metadata[field.name] != ''}">
                                         <th:block th:switch="${field.type}">
                                             <span th:case="'DATE'"
@@ -75,10 +84,10 @@
                                     </th:block>
                                 </td>
 
-                                <td class="text-center">
+                                <td class="text-center text-nowrap">
                                     <span class="badge bg-secondary rounded-pill" th:text="${card.files.size()}">0</span>
                                 </td>
-                                <td th:text="${card.createdBy}"></td>
+                                <td class="text-nowrap" th:text="${card.createdBy}"></td>
                             </tr>
 
                             <!-- Ja saraksts ir tukšs -->
@@ -93,13 +102,17 @@
                 </div>
             </div>
         </div>
+    </div>
 
-        <div class="col-lg-4">
-            <div class="card shadow-sm border-primary">
-                <div class="card-header bg-primary text-white fw-bold">
-                    Jaunas kartītes forma (Ģenerēta dinamiski!)
+    <!-- Modālais logs jaunas kartītes izveidei -->
+    <div class="modal fade" id="newCardModal" tabindex="-1" aria-labelledby="newCardModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fw-bold" id="newCardModalLabel">Jauns ieraksts</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Aizvērt"></button>
                 </div>
-                <div class="card-body">
+                <div class="modal-body">
                     <form id="dynamicDocForm">
                         <!-- Slēptie pamatdati -->
                         <input type="hidden" id="documentListId" th:value="${listId}">
@@ -110,55 +123,58 @@
 
                         <hr class="my-4">
 
-                        <!-- DINAMISKAIS CIKLS: Zīmē laukus atkarībā no to tipa -->
-                        <th:block th:each="field : ${dynamicFields}">
+                        <!-- DINAMISKAIS CIKLS: Zīmē laukus atkarībā no to tipa (Izkārtoti 2 kolonnās) -->
+                        <div class="row g-3">
+                            <th:block th:each="field : ${dynamicFields}">
+                                <div class="col-md-6">
+                                    <th:block th:switch="${field.type}">
 
-                            <th:block th:switch="${field.type}">
+                                        <!-- TEXT tips -->
+                                        <th:block th:case="'TEXT'">
+                                            <div th:replace="~{components/forms :: textInput(
+                                                    id=${'field_' + field.name}, label=${field.name}, name=${field.name}, value='', required=true)}"></div>
+                                        </th:block>
 
-                                <!-- TEXT tips -->
-                                <th:block th:case="'TEXT'">
-                                    <div th:replace="~{components/forms :: textInput(
-                                            id=${'field_' + field.name}, label=${field.name}, name=${field.name}, value='', required=true)}"></div>
-                                </th:block>
+                                        <!-- DATE tips -->
+                                        <th:block th:case="'DATE'">
+                                            <div th:replace="~{components/forms :: dateInput(
+                                                    id=${'field_' + field.name}, label=${field.name}, name=${field.name}, value='', required=true)}"></div>
+                                        </th:block>
 
-                                <!-- DATE tips -->
-                                <th:block th:case="'DATE'">
-                                    <div th:replace="~{components/forms :: dateInput(
-                                            id=${'field_' + field.name}, label=${field.name}, name=${field.name}, value='', required=true)}"></div>
-                                </th:block>
+                                        <!-- SELECT tips -->
+                                        <th:block th:case="'SELECT'">
+                                            <div th:replace="~{components/forms :: selectInput(
+                                                    id=${'field_' + field.name}, label=${field.name}, name=${field.name},
+                                                    optionsList=${field.options != null ? field.options['values'] : null}, selectedValue='', required=true)}"></div>
+                                        </th:block>
 
-                                <!-- SELECT tips -->
-                                <th:block th:case="'SELECT'">
-                                    <div th:replace="~{components/forms :: selectInput(
-                                            id=${'field_' + field.name}, label=${field.name}, name=${field.name},
-                                            optionsList=${field.options != null ? field.options['values'] : null}, selectedValue='', required=true)}"></div>
-                                </th:block>
+                                        <!-- CHECKBOX tips -->
+                                        <th:block th:case="'CHECKBOX'">
+                                            <div th:replace="~{components/forms :: checkboxInput(
+                                                    id=${'field_' + field.name}, label=${field.name}, name=${field.name}, checked=false)}"></div>
+                                        </th:block>
 
-                                <!-- CHECKBOX tips -->
-                                <th:block th:case="'CHECKBOX'">
-                                    <div th:replace="~{components/forms :: checkboxInput(
-                                            id=${'field_' + field.name}, label=${field.name}, name=${field.name}, checked=false)}"></div>
-                                </th:block>
+                                        <!-- TEXTAREA tips -->
+                                        <th:block th:case="'TEXTAREA'">
+                                            <div th:replace="~{components/forms :: textareaInput(
+                                                    id=${'field_' + field.name}, label=${field.name}, name=${field.name}, value='', required=true, rows=3)}"></div>
+                                        </th:block>
 
-                                <!-- TEXTAREA tips -->
-                                <th:block th:case="'TEXTAREA'">
-                                    <div th:replace="~{components/forms :: textareaInput(
-                                            id=${'field_' + field.name}, label=${field.name}, name=${field.name}, value='', required=true, rows=3)}"></div>
-                                </th:block>
+                                        <!-- FILE tips -->
+                                        <th:block th:case="'FILE'">
+                                            <div th:replace="~{components/forms :: fileInput(
+                                                    id=${'field_' + field.name}, label=${field.name}, name=${field.name}, required=false, multiple=true)}"></div>
+                                        </th:block>
 
-                                <!-- FILE tips -->
-                                <th:block th:case="'FILE'">
-                                    <div th:replace="~{components/forms :: fileInput(
-                                            id=${'field_' + field.name}, label=${field.name}, name=${field.name}, required=false, multiple=true)}"></div>
-                                </th:block>
-
+                                    </th:block>
+                                </div>
                             </th:block>
-
-                        </th:block>
-
-                        <button type="button" id="saveDocBtn" class="btn btn-success w-100 mt-3">Saglabāt sistēmā
-                        </button>
+                        </div>
                     </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Atcelt</button>
+                    <button type="button" id="saveDocBtn" class="btn btn-success">Saglabāt sistēmā</button>
                 </div>
             </div>
         </div>
