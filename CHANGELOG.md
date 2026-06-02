@@ -3,6 +3,18 @@
 Visi ievērojamie šī projekta labojumi tiks dokumentēti šajā failā.
 Projekts ievēro [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.1] - 2026-06-02
+
+### Izlabots
+- **SharePoint API Parsēšana:** Novērsta `Internal Server Error` (No Creators for JsonNode) kļūda, nomainot `RestTemplate` atbildes tipu uz `String` un parsējot to ar Spring `ObjectMapper`.
+- **Thymeleaf Datumu Kļūda:** Salabota `DateTimeParseException`, ko izraisīja SharePoint ISO 8601 datuma formāts (ar 'T' un 'Z'). Ieviesta `#strings.substring` funkcija, lai izgrieztu tikai datuma daļu.
+- **Kalendāra Dienas Skats:** Atjaunota pazudušo "Visas dienas" notikumu (piem., atvaļinājumu) attēlošana Dienas skata augšpusē.
+- **Kalendāra Ikonas:** Atjaunota atšķirīgu SVG ikonu (pulkstenis vs kalendāra lapiņa) attēlošana atkarībā no notikuma tipa.
+
+### Pievienots / Uzlabots
+- **UI Uzlabojumi:** Dienas skatā notikumiem pievienots laika intervāls ar skaistu SVG bultiņu (`→ 09:00 - 10:00`), ievērojot KISS principu bez lieka treknraksta.
+- **Drošības Filtrēšana:** Atrisināta problēma ar `405 Method Not Allowed` un automātisku novirzīšanu uz Login lapu, izsaucot API end-pointus caur pārlūka konsoli.
+
 ## [1.7.0] - 2026-06-01
 
 ### Pievienots

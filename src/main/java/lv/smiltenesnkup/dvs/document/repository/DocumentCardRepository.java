@@ -19,8 +19,11 @@ public interface DocumentCardRepository extends JpaRepository<DocumentCard, Long
      */
     List<DocumentCard> findAllByDocumentListIdOrderByCreatedAtDesc(Long documentListId);
 
-
     /**
+     * Atrod dokumenta kartīti pēc tās SharePoint identifikatora.
+     */
+    java.util.Optional<DocumentCard> findBySharepointItemId(String sharepointItemId);
+
 
     /**
      * Native PostgreSQL vaicājums, kas meklē JSONB kolonnā.

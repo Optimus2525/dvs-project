@@ -27,3 +27,5 @@ Desktop.ini
 application-local.yml
 *.log
 *.log.*
+
+src/main/resources/application.yaml

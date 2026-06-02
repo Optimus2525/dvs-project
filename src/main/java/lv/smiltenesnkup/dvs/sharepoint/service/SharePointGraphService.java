@@ -1,5 +1,7 @@
 package lv.smiltenesnkup.dvs.sharepoint.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpEntity;
@@ -14,12 +16,16 @@ import java.util.function.Supplier;
 
 /**
  * Bāzes serviss saziņai ar Microsoft Graph API.
- * Nodrošina centralizētu Throttling (429 kļūdu) apstrādi.
+ * Nodrošina centralizētu Throttling (429 kļūdu) apstrādi un datu ielasīšanu.
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class SharePointGraphService {
+
+
+    private final SharePointAuthService authService;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     private final RestTemplate restTemplate = new RestTemplate(); // Vēlāk var tikt konfigurēts kā @Bean ar OAuth2 tokenu
 
@@ -83,5 +89,54 @@ public class SharePointGraphService {
         );
     }
     */
+
+
+    /**
+     * Izveido HTTP hederus ar iegūto Access Token.
+     */
+    private HttpHeaders createAuthHeaders() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(authService.getAccessToken());
+        headers.set("Accept", "application/json");
+        return headers;
+    }
+
+    /**
+     * Nolasa visas kolonnas (lauku definīcijas) no konkrēta SharePoint saraksta.
+     */
+    public JsonNode getListColumns(String siteId, String listId) {
+        String url = String.format("https://graph.microsoft.com/v1.0/sites/%s/lists/%s/columns", siteId, listId);
+        log.info("Pieprasa kolonnas no SharePoint saraksta: {}", url);
+
+        String response = executeWithRetry(() ->
+                restTemplate.exchange(url, HttpMethod.GET, new HttpEntity<>(createAuthHeaders()), String.class)
+        );
+
+        try {
+            return objectMapper.readTree(response).get("value");
+        } catch (Exception e) {
+            throw new RuntimeException("Kļūda parsējot Graph API atbildi kolonnām", e);
+        }
+    }
+
+
+    /**
+     * Nolasa visus ierakstus no konkrēta SharePoint saraksta, iekļaujot to dinamiskos metadatus (fields).
+     */
+    public JsonNode getListItems(String siteId, String listId) {
+        String url = String.format("https://graph.microsoft.com/v1.0/sites/%s/lists/%s/items?expand=fields", siteId, listId);
+        log.info("Pieprasa ierakstus no SharePoint saraksta: {}", url);
+
+        String response = executeWithRetry(() ->
+                restTemplate.exchange(url, HttpMethod.GET, new HttpEntity<>(createAuthHeaders()), String.class)
+        );
+
+        try {
+            return objectMapper.readTree(response).get("value");
+        } catch (Exception e) {
+            throw new RuntimeException("Kļūda parsējot Graph API atbildi ierakstiem", e);
+        }
+    }
+
 
 }

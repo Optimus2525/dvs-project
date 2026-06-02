@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import lv.smiltenesnkup.dvs.admin.dto.UiSettingsUpdateRequestDTO;
 import lv.smiltenesnkup.dvs.admin.service.UiSettingService;
+import lv.smiltenesnkup.dvs.sharepoint.service.SharePointSyncService;
 
 @Slf4j
 @RestController
@@ -22,6 +23,7 @@ public class AdminApiController {
     private final DocumentListService documentListService;
     private final UiSettingService uiSettingService;
     private final CalendarService calendarService;
+    private final SharePointSyncService sharePointSyncService;
 
     // --- KALENDĀRA KATEGORIJAS ---
 
@@ -69,6 +71,22 @@ public class AdminApiController {
         log.info("REST request to create list with fields: {}", requestDTO.getCode());
         DocumentListDTO createdList = documentListService.createListWithFields(requestDTO);
         return ResponseEntity.ok(createdList);
+    }
+
+
+    /**
+     * Manuāli iedarbina SharePoint sinhronizāciju konkrētam sarakstam (PoC testēšanai).
+     */
+    @PostMapping("/sharepoint/sync/{listId}")
+    public ResponseEntity<String> syncSharePointList(@PathVariable Long listId) {
+        log.info("REST pieprasījums SharePoint sinhronizācijai sarakstam ID: {}", listId);
+        try {
+            sharePointSyncService.syncListFromSharePoint(listId);
+            return ResponseEntity.ok("Sinhronizācija veiksmīga!");
+        } catch (Exception e) {
+            log.error("Sinhronizācijas kļūda", e);
+            return ResponseEntity.internalServerError().body("Kļūda: " + e.getMessage());
+        }
     }
 
 }
