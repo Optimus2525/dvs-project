@@ -18,14 +18,14 @@
     <!-- Flatpickr CSS (Datumu ievadei) -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 
-    <!-- Dinamiski injicēti CSS mainīgie (OBLIGĀTI jāpaliek HTML failā) -->
+    <!-- Dinamiski injicēti CSS mainīgie ar dzelžainu aizsardzību pret tukšumiem -->
     <style th:inline="text">
         :root {
-            --dvs-font-size: [(${uiSettings != null and uiSettings.get('--dvs-font-size') != null ? uiSettings.get('--dvs-font-size') : '16px'})];
-            --dvs-card-padding: [(${uiSettings != null and uiSettings.get('--dvs-card-padding') != null ? uiSettings.get('--dvs-card-padding') : '1rem'})];
-            --dvs-table-padding: [(${uiSettings != null and uiSettings.get('--dvs-table-padding') != null ? uiSettings.get('--dvs-table-padding') : '0.5rem'})];
-            --dvs-input-font-size: [(${uiSettings != null and uiSettings.get('--dvs-input-font-size') != null ? uiSettings.get('--dvs-input-font-size') : '1rem'})];
-            --dvs-input-padding: [(${uiSettings != null and uiSettings.get('--dvs-input-padding') != null ? uiSettings.get('--dvs-input-padding') : '0.375rem 0.75rem'})];
+            --dvs-font-size: [(${#strings.isEmpty(uiSettings['--dvs-font-size']) ? '14px' : uiSettings['--dvs-font-size']})];
+            --dvs-card-padding: [(${#strings.isEmpty(uiSettings['--dvs-card-padding']) ? '1rem' : uiSettings['--dvs-card-padding']})];
+            --dvs-table-padding: [(${#strings.isEmpty(uiSettings['--dvs-table-padding']) ? '0.5rem' : uiSettings['--dvs-table-padding']})];
+            --dvs-input-font-size: [(${#strings.isEmpty(uiSettings['--dvs-input-font-size']) ? '14px' : uiSettings['--dvs-input-font-size']})];
+            --dvs-input-padding: [(${#strings.isEmpty(uiSettings['--dvs-input-padding']) ? '0.375rem 0.75rem' : uiSettings['--dvs-input-padding']})];
         }
     </style>
 
@@ -90,9 +90,19 @@
                 <div class="card-body p-2">
                     <ul class="nav-tree">
 
+                        <!-- MŪSU SHAREPOINT TESTA SARAKSTS -->
+                        <li class="mb-2 border-bottom pb-2">
+                            <a href="/documents/dashboard"
+                               class="btn btn-toggle text-decoration-none text-primary fw-bold"
+                               style="background-color: #e7f1ff; border-radius: 0.25rem;">
+                                ⭐ SharePoint Saraksts
+                            </a>
+                        </li>
+
                         <!-- Piemērs 1: Vadības dokumenti -->
                         <li class="mb-1">
-                            <button class="btn btn-toggle align-items-center rounded collapsed" data-bs-toggle="collapse" data-bs-target="#vadibas-collapse" aria-expanded="false">
+                            <button class="btn btn-toggle align-items-center rounded collapsed"
+                                    data-bs-toggle="collapse" data-bs-target="#vadibas-collapse" aria-expanded="false">
                                 1. Vadības dokumenti
                             </button>
                             <div class="collapse" id="vadibas-collapse">
@@ -105,19 +115,23 @@
 
                         <!-- Piemērs 2: Korespondence (Ar dziļāku līmeni) -->
                         <li class="mb-1">
-                            <button class="btn btn-toggle align-items-center rounded collapsed" data-bs-toggle="collapse" data-bs-target="#korespondence-collapse" aria-expanded="false">
+                            <button class="btn btn-toggle align-items-center rounded collapsed"
+                                    data-bs-toggle="collapse" data-bs-target="#korespondence-collapse"
+                                    aria-expanded="false">
                                 4. Korespondence
                             </button>
                             <div class="collapse" id="korespondence-collapse">
                                 <ul class="btn-toggle-nav pb-1">
                                     <li class="mb-1">
-                                        <button class="btn btn-toggle align-items-center rounded collapsed" data-bs-toggle="collapse" data-bs-target="#ienakosa-collapse" aria-expanded="false">
+                                        <button class="btn btn-toggle align-items-center rounded collapsed"
+                                                data-bs-toggle="collapse" data-bs-target="#ienakosa-collapse"
+                                                aria-expanded="false">
                                             4.1. Ienākošā
                                         </button>
                                         <div class="collapse" id="ienakosa-collapse">
                                             <ul class="btn-toggle-nav pb-1">
                                                 <li><a href="#">4.1.6. 2025</a></li>
-                                                <li><a href="/documents/dashboard" class="active">4.1.7. 2026</a></li>
+                                                <li><a href="#" class="active">4.1.7. 2026</a></li>
                                             </ul>
                                         </div>
                                     </li>
@@ -129,7 +143,9 @@
 
                         <!-- Piemērs 3: Personāls -->
                         <li class="mb-1">
-                            <button class="btn btn-toggle align-items-center rounded collapsed" data-bs-toggle="collapse" data-bs-target="#personals-collapse" aria-expanded="false">
+                            <button class="btn btn-toggle align-items-center rounded collapsed"
+                                    data-bs-toggle="collapse" data-bs-target="#personals-collapse"
+                                    aria-expanded="false">
                                 5. Personāls
                             </button>
                             <div class="collapse" id="personals-collapse">
@@ -150,9 +166,12 @@
                 </div>
                 <div class="card-body p-2">
                     <ul class="nav-tree">
-                        <li><a href="/admin/dashboard" class="btn btn-toggle text-decoration-none">Galvenais panelis</a></li>
-                        <li><a href="/admin/lists" class="btn btn-toggle text-decoration-none">Sarakstu pārvaldība</a></li>
-                        <li><a href="/admin/settings" class="btn btn-toggle text-decoration-none">Sistēmas iestatījumi</a></li>
+                        <li><a href="/admin/dashboard" class="btn btn-toggle text-decoration-none">Galvenais panelis</a>
+                        </li>
+                        <li><a href="/admin/lists" class="btn btn-toggle text-decoration-none">Sarakstu pārvaldība</a>
+                        </li>
+                        <li><a href="/admin/settings" class="btn btn-toggle text-decoration-none">Sistēmas
+                            iestatījumi</a></li>
                     </ul>
                 </div>
             </div>
@@ -168,7 +187,8 @@
 <!-- Pievienots Footer ar dinamisko versiju -->
 <footer class="mt-auto py-3 border-top mt-5">
     <div class="container-fluid text-center">
-        <span class="text-muted" th:text="'DVS v ' + ${appVersion} + ' © ' + ${#dates.format(#dates.createNow(), 'yyyy')} + ' - Izstrādātājs - DVS system'">DVS v 1.0.0</span>
+        <span class="text-muted"
+              th:text="'DVS v ' + ${appVersion} + ' © ' + ${#dates.format(#dates.createNow(), 'yyyy')} + ' - Izstrādātājs - DVS system'">DVS v 1.0.0</span>
     </div>
 </footer>
 

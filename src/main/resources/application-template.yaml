@@ -1,0 +1,14 @@
+app:
+  version: 1.7.2
+server:
+  port: 8095
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/dvs_db
+    username: postgres
+    password: root
+azure:
+  entra:
+    tenant-id: "IEVADI_TENANT_ID"
+    client-id: "IEVADI_CLIENT_ID"
+    client-secret: "IEVADI_SECRET"

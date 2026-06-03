@@ -52,13 +52,12 @@
 
         <!-- Mani Uzdevumi -->
         <h5 class="fw-bold mb-3 text-primary">Mani Uzdevumi</h5>
-        <div class="card shadow-sm border-top-0 mb-4">
+        <div class="card shadow-sm mb-4">
             <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="table table-hover table-bordered align-middle mb-0">
                         <thead class="table-light">
                         <tr>
-                            <!-- Fiksēts platums pirmajai kolonnai kā Lietvedības sarakstā -->
                             <th style="width: 20%; min-width: 200px;">Virsraksts</th>
                             <th>Tips</th>
                             <th>Izveidoja</th>
@@ -69,7 +68,6 @@
                         </thead>
                         <tbody>
                         <tr th:each="task : ${assignedTasks}">
-                            <!-- Vārdu lūšana un normāls fonta biezums -->
                             <td style="word-break: break-word;">
                                 <a href="#" class="text-decoration-none text-primary task-title-link" th:data-id="${task.id}" th:text="${task.title}"></a>
                             </td>
@@ -108,13 +106,12 @@
 
         <!-- Sekoju Līdzi -->
         <h5 class="fw-bold mb-3 text-primary">Sekoju līdzi</h5>
-        <div class="card shadow-sm border-top-0 mb-4">
+        <div class="card shadow-sm mb-4">
             <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="table table-hover table-bordered align-middle mb-0">
                         <thead class="table-light">
                         <tr>
-                            <!-- Fiksēts platums pirmajai kolonnai -->
                             <th style="width: 20%; min-width: 200px;">Virsraksts</th>
                             <th>Tips</th>
                             <th>Atbildīgais</th>
@@ -124,7 +121,6 @@
                         </thead>
                         <tbody>
                         <tr th:each="task : ${followedTasks}">
-                            <!-- Vārdu lūšana un normāls fonta biezums -->
                             <td style="word-break: break-word;">
                                 <a href="#" class="text-decoration-none text-primary task-title-link" th:data-id="${task.id}" th:text="${task.title}"></a>
                             </td>

@@ -35,19 +35,13 @@
     </div>
 
     <div class="row">
-        <!-- Tabula tagad aizņem visu platumu (col-12) -->
         <div class="col-12">
-            <div class="card shadow-sm border-top-0">
+            <div class="card shadow-sm">
                 <div class="card-body p-0">
                     <div class="table-responsive">
-                        <!-- Noņemts text-nowrap, lai gari virsraksti varētu lūzt jaunā rindā -->
                         <table class="table table-hover table-bordered align-middle mb-0">
                             <thead class="table-light">
                             <tr>
-                                <!-- Fiksēts 20% platums pirmajai kolonnai -->
-                                <th style="width: 20%; min-width: 200px;">Virsraksts / Apraksts</th>
-                                <th>Numurs</th>
-
                                 <!-- DINAMISKĀS KOLONNAS (Virsraksti) -->
                                 <th th:each="field : ${dynamicFields}" th:text="${field.name}"></th>
 
@@ -58,25 +52,31 @@
                             <tbody>
                             <!-- DOKUMENTU DATI (Sakārtoti no jaunākā uz vecāko) -->
                             <tr th:each="card : ${documentCards}">
-                                <!-- word-break nodrošina, ka pat viens ļoti garš vārds nesalauzīs platumu -->
-                                <td style="word-break: break-word;">
-                                    <!-- Noņemts fw-bold, lai teksts būtu normālā biezumā -->
-                                    <a th:href="@{'/documents/cards/' + ${card.id}}"
-                                       class="text-decoration-none text-primary"
-                                       th:text="${card.title}"></a>
-                                </td>
-                                <!-- Pārējām kolonnām atgriežam text-nowrap, lai datumi un numuri neietu divās rindās -->
-                                <td class="text-nowrap"><span class="text-muted" th:text="${card.documentNumber}"></span></td>
 
                                 <!-- DINAMISKĀS VĒRTĪBAS NO JSONB AR FORMATĒŠANU -->
-                                <td class="text-nowrap" th:each="field : ${dynamicFields}">
+                                <td th:each="field : ${dynamicFields}"
+                                    th:class="${field.sharepointInternalName == 'Title' ? 'text-wrap' : 'text-nowrap'}"
+                                    th:style="${field.sharepointInternalName == 'Title'} ? 'word-break: break-word; min-width: 200px;' : ''">
+
                                     <th:block th:if="${card.metadata != null and card.metadata[field.name] != null and card.metadata[field.name] != ''}">
-                                        <th:block th:switch="${field.type}">
-                                            <span th:case="'DATE'"
-                                                  th:text="${#temporals.format(T(java.time.LocalDate).parse(#strings.substring(card.metadata[field.name], 0, 10)), 'dd.MM.yyyy')}">
-                                            </span>
-                                            <span th:case="*" th:text="${card.metadata[field.name]}"></span>
+
+                                        <!-- Ja šī ir SharePoint Title kolonna, pārvēršam par klikšķināmu saiti -->
+                                        <th:block th:if="${field.sharepointInternalName == 'Title'}">
+                                            <a th:href="@{'/documents/cards/' + ${card.id}}"
+                                               class="text-decoration-none text-primary fw-bold"
+                                               th:text="${card.metadata[field.name]}"></a>
                                         </th:block>
+
+                                        <!-- Pārējām kolonnām standarta izvade -->
+                                        <th:block th:unless="${field.sharepointInternalName == 'Title'}">
+                                            <th:block th:switch="${field.type}">
+                                                <span th:case="'DATE'"
+                                                      th:text="${#temporals.format(T(java.time.LocalDate).parse(#strings.substring(card.metadata[field.name], 0, 10)), 'dd.MM.yyyy')}">
+                                                </span>
+                                                <span th:case="*" th:text="${card.metadata[field.name]}"></span>
+                                            </th:block>
+                                        </th:block>
+
                                     </th:block>
                                     <!-- Ja vērtība ir tukša, parādam svītriņu -->
                                     <th:block th:unless="${card.metadata != null and card.metadata[field.name] != null and card.metadata[field.name] != ''}">

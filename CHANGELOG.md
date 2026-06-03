@@ -3,6 +3,23 @@
 Visi ievērojamie šī projekta labojumi tiks dokumentēti šajā failā.
 Projekts ievēro [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.2] - 2026-06-03
+### Pievienots (Added)
+- `HomeWebController`, kas nodrošina sistēmas saknes (`/`) automātisku novirzīšanu uz "Mani uzdevumi" un kalendāra paneli.
+- SharePoint pielikumu (Attachments) sinhronizācija ar lokālo `DocumentFile` tabulu, izmantojot Graph API.
+- `extractSharePointValue` metode, kas spēj izvilkt cilvēkam lasāmu tekstu no kompleksiem SharePoint JSON objektiem (Lookup, Person/Group, Multi-select).
+- Izvēlņu (Choice) opciju automātiska ielasīšana un saglabāšana `FieldDefinition` opcijās no SharePoint saraksta metadatiem.
+
+### Mainīts (Changed)
+- Kreisās puses navigācijas izvēlnē pievienota izcelta ātrā saite uz SharePoint testa sarakstu.
+- Dokumentu saraksta tabulā atslēgta lokālā autonumerācija; SharePoint `Title` kolonna tagad kalpo kā galvenā klikšķināmā saite uz dokumenta kartīti.
+
+### Izlabots (Fixed)
+- Atjaunots un stabilizēts elegants tabulu un karšu dizains (`border-0`, `shadow-sm`, `rounded-3`, `ps-4`, `pe-4`) visos skatos.
+- Izlabota kļūda `base.html` failā, pievienojot aizsardzību pret tukšiem CSS mainīgajiem (`#strings.isEmpty`), kas iepriekš sagrāva lapas izkārtojumu.
+- Salabots Reāllaika Priekšskatījums (Live Preview) Administratora iestatījumu lapā, novēršot automātisku formas pārlādi (`onsubmit="event.preventDefault();"`).
+- Novērsta lieka HTML koda drukāšanās dokumentu saraksta tabulā.
+
 ## [1.7.1] - 2026-06-02
 
 ### Izlabots

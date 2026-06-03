@@ -139,4 +139,25 @@ public class SharePointGraphService {
     }
 
 
+    /**
+     * Nolasa visus pielikumus (failus), kas piesaistīti konkrētam SharePoint saraksta ierakstam.
+     */
+    public JsonNode getItemAttachments(String siteId, String listId, String itemId) {
+        String url = String.format("https://graph.microsoft.com/v1.0/sites/%s/lists/%s/items/%s/attachments", siteId, listId, itemId);
+        log.info("Pieprasa pielikumus no SharePoint ieraksta: {}", url);
+
+        String response = executeWithRetry(() ->
+                restTemplate.exchange(url, HttpMethod.GET, new HttpEntity<>(createAuthHeaders()), String.class)
+        );
+
+        try {
+            return objectMapper.readTree(response).get("value");
+        } catch (Exception e) {
+            log.error("Kļūda parsējot Graph API atbildi pielikumiem", e);
+            // Atgriež tukšu masīvu, lai neapturētu kopējo sinhronizāciju
+            return objectMapper.createArrayNode();
+        }
+    }
+
+
 }
