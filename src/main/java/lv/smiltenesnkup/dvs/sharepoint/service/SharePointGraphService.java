@@ -146,15 +146,19 @@ public class SharePointGraphService {
         String url = String.format("https://graph.microsoft.com/v1.0/sites/%s/lists/%s/items/%s/attachments", siteId, listId, itemId);
         log.info("Pieprasa pielikumus no SharePoint ieraksta: {}", url);
 
-        String response = executeWithRetry(() ->
-                restTemplate.exchange(url, HttpMethod.GET, new HttpEntity<>(createAuthHeaders()), String.class)
-        );
-
         try {
+            String response = executeWithRetry(() ->
+                    restTemplate.exchange(url, HttpMethod.GET, new HttpEntity<>(createAuthHeaders()), String.class)
+            );
             return objectMapper.readTree(response).get("value");
+
+        } catch (org.springframework.web.client.HttpClientErrorException e) {
+            // Šeit mēs noķeram Microsoft 400 Bad Request kļūdu!
+            log.warn("Pielikumu galapunkts (endpoint) nav pieejams ierakstam {}. Turpina bez pielikumiem.", itemId);
+            return objectMapper.createArrayNode();
+
         } catch (Exception e) {
             log.error("Kļūda parsējot Graph API atbildi pielikumiem", e);
-            // Atgriež tukšu masīvu, lai neapturētu kopējo sinhronizāciju
             return objectMapper.createArrayNode();
         }
     }

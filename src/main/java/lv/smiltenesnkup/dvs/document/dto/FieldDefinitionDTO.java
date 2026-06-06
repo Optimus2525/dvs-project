@@ -4,6 +4,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lv.smiltenesnkup.dvs.document.enums.FieldType;
+
 import java.util.Map;
 
 @Data
@@ -13,7 +15,7 @@ import java.util.Map;
 public class FieldDefinitionDTO {
     private Long id;
     private String name;
-    private String type;
+    private FieldType type;
     private Map<String, Object> options;
     private String sharepointInternalName;
 

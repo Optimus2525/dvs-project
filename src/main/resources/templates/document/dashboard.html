@@ -29,9 +29,15 @@
 
     <div class="d-flex justify-content-between align-items-end mb-2">
         <h2 class="h4 mb-0">Ienākošā korespondence 2026</h2>
-        <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#newCardModal">
-            + Pievienot jaunu ierakstu
-        </button>
+        <div>
+            <button type="button" class="btn btn-outline-success btn-sm me-2" id="syncSharePointBtn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="me-1" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/></svg>
+                Sinhronizēt ar SP
+            </button>
+            <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#newCardModal">
+                + Pievienot jaunu ierakstu
+            </button>
+        </div>
     </div>
 
     <div class="row">
@@ -69,7 +75,7 @@
 
                                         <!-- Pārējām kolonnām standarta izvade -->
                                         <th:block th:unless="${field.sharepointInternalName == 'Title'}">
-                                            <th:block th:switch="${field.type}">
+                                            <th:block th:switch="${#strings.toString(field.type)}">
                                                 <span th:case="'DATE'"
                                                       th:text="${#temporals.format(T(java.time.LocalDate).parse(#strings.substring(card.metadata[field.name], 0, 10)), 'dd.MM.yyyy')}">
                                                 </span>
@@ -127,7 +133,7 @@
                         <div class="row g-3">
                             <th:block th:each="field : ${dynamicFields}">
                                 <div class="col-md-6">
-                                    <th:block th:switch="${field.type}">
+                                    <th:block th:switch="${#strings.toString(field.type)}">
 
                                         <!-- TEXT tips -->
                                         <th:block th:case="'TEXT'">
@@ -183,60 +189,95 @@
     <!-- Vanilla JS datu savākšanai un sūtīšanai -->
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+
+            // ==========================================
+            // 1. JAUNA IERAKSTA SAGLABĀŠANAS LOĢIKA
+            // ==========================================
             const saveBtn = document.getElementById('saveDocBtn');
+            if (saveBtn) {
+                saveBtn.addEventListener('click', function() {
+                    // Formas validācija
+                    const form = document.getElementById('dynamicDocForm');
+                    if (!form.checkValidity()) {
+                        form.reportValidity();
+                        return;
+                    }
 
-            saveBtn.addEventListener('click', function() {
-                // Formas validācija
-                const form = document.getElementById('dynamicDocForm');
-                if (!form.checkValidity()) {
-                    form.reportValidity();
-                    return;
-                }
+                    // 1. Savācam pamatdatus
+                    const listId = document.getElementById('documentListId').value;
+                    const title = document.getElementById('documentTitle').value;
+                    const metadata = {};
 
-                // 1. Savācam pamatdatus
-                const listId = document.getElementById('documentListId').value;
-                const title = document.getElementById('documentTitle').value;
-                const metadata = {};
+                    // 2. Savācam visus dinamiskos laukus (tiem id sākas ar 'field_')
+                    const dynamicInputs = document.querySelectorAll("input[id^='field_'], select[id^='field_']");
+                    dynamicInputs.forEach(input => {
+                        // Ja izmanto altInput (Flatpickr), ņemam reālo (slēpto) lauku, kam nav klases 'form-control input'
+                        if (input.type !== 'hidden' || input.classList.contains('flatpickr-input')) {
+                            metadata[input.name] = input.value;
+                        }
+                    });
 
-                // 2. Savācam visus dinamiskos laukus (tiem id sākas ar 'field_')
-                const dynamicInputs = document.querySelectorAll("input[id^='field_'], select[id^='field_']");
-                dynamicInputs.forEach(input => {
-                    // Ja izmanto altInput (Flatpickr), ņemam reālo (slēpto) lauku, kam nav klases 'form-control input'
-                    if (input.type !== 'hidden' || input.classList.contains('flatpickr-input')) {
-                        metadata[input.name] = input.value;
+                    // 3. Sagatavojam DTO objektu
+                    const payload = {
+                        documentListId: parseInt(listId),
+                        title: title,
+                        documentNumber: "GEN-" + Math.floor(Math.random() * 1000), // Pagaidu numurs
+                        createdBy: "Lietotājs", // Vēlāk ņemsim no Spring Security
+                        metadata: metadata
+                    };
+
+                    // 4. Sūtām uz mūsu API (Fetch API)
+                    fetch('/api/v1/documents/cards', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(payload)
+                    })
+                        .then(async response => {
+                            if (!response.ok) {
+                                // Nolasa servera ģenerēto kļūdas ziņojumu (no GlobalExceptionHandler)
+                                const errData = await response.json();
+                                throw new Error(errData.message || "Kļūda saglabājot datus!");
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            // Pārlādējam lapu, lai uzreiz redzētu jauno ierakstu tabulā
+                            window.location.reload();
+                        })
+                        .catch(error => {
+                            alert(error.message);
+                            console.error(error);
+                        });
+                });
+            }
+
+            // ==========================================
+            // 2. SHAREPOINT SINHRONIZĀCIJAS LOĢIKA
+            // ==========================================
+            const syncBtn = document.getElementById('syncSharePointBtn');
+            if (syncBtn) {
+                syncBtn.addEventListener('click', async function() {
+                    const listId = document.getElementById('documentListId').value;
+                    const originalHtml = this.innerHTML;
+                    this.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Sinhronizē...';
+                    this.disabled = true;
+
+                    try {
+                        const response = await fetch(`/api/v1/admin/sharepoint/sync/${listId}`, { method: 'POST' });
+                        if (!response.ok) {
+                            const errText = await response.text();
+                            throw new Error(errText);
+                        }
+                        window.location.reload();
+                    } catch (error) {
+                        alert("Sinhronizācijas kļūda:\n" + error.message);
+                        this.innerHTML = originalHtml;
+                        this.disabled = false;
                     }
                 });
-
-                // 3. Sagatavojam DTO objektu
-                const payload = {
-                    documentListId: parseInt(listId),
-                    title: title,
-                    documentNumber: "GEN-" + Math.floor(Math.random() * 1000), // Pagaidu numurs
-                    createdBy: "Lietotājs", // Vēlāk ņemsim no Spring Security
-                    metadata: metadata
-                };
-
-                // 4. Sūtām uz mūsu API (Fetch API)
-                fetch('/api/v1/documents/cards', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(payload)
-                })
-                    .then(response => {
-                        if (!response.ok) throw new Error("Kļūda saglabājot datus!");
-                        return response.json();
-                    })
-                    .then(data => {
-                        // Pārlādējam lapu, lai uzreiz redzētu jauno ierakstu tabulā
-                        window.location.reload();
-                    })
-                    .catch(error => {
-                        alert(error.message);
-                        console.error(error);
-                    });
-            });
+            }
 
         });
     </script>

@@ -30,8 +30,12 @@ public class FieldDefinition {
     @Column(nullable = false)
     private String name;
 
-    @Column(nullable = false)
-    private String type; // e.g., TEXT, DATE, SELECT
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 50)
+    private lv.smiltenesnkup.dvs.document.enums.FieldType type;
+
+    @Column(name = "is_required", nullable = false)
+    private boolean required = false;
 
     // Glabā papildus konfigurāciju JSONB formātā (piem., dropdown izvēlnes opcijas)
     @JdbcTypeCode(SqlTypes.JSON)

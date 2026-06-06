@@ -3,6 +3,23 @@
 Visi ievērojamie šī projekta labojumi tiks dokumentēti šajā failā.
 Projekts ievēro [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.0] - 2026-06-06
+### Pievienots (Added)
+- Pilna Microsoft Entra ID (Azure AD) SSO integrācija ar OAuth2/OIDC, ieskaitot korektu izrakstīšanās (Logout) plūsmu, kas izdzēš Microsoft sesiju.
+- `FieldType` enum izveide stingrai datu tipu kontrolei (aizstājot brīva formāta `String`).
+- `MetadataValidationService`, kas nodrošina JSONB metadatu obligātuma un `SELECT` opciju validāciju pirms saglabāšanas datubāzē.
+- Datubāzē pievienota `is_required` kolonna dinamiskajiem laukiem (Flyway V12).
+- Dokumentu saraksta skatā pievienota manuāla "Sinhronizēt ar SP" poga, kas reāllaikā ielasa jaunos datus no SharePoint.
+
+### Mainīts (Changed)
+- Koda bāze un `pom.xml` atkarības pilnībā iztīrītas un pārceltas uz stabilu Spring Boot 3.3.0 LTS versiju.
+- Dokumentu kartīšu Thymeleaf skati atjaunināti, lai korekti strādātu ar jauno `FieldType` enum (`#strings.toString()`).
+
+### Izlabots (Fixed)
+- Novērsta SharePoint Graph API `400 Bad Request` kļūda, mēģinot ielasīt pielikumus no neatbalstītiem sarakstiem (kļūda tagad tiek eleganti noķerta un ignorēta).
+- Izlabota kļūda, kuras dēļ dokumentu saraksta tabulā drukājās lieks HTML kods.
+- Salabota JavaScript `fetch` loģika, lai pārlūkā spētu nolasīt un attēlot servera ģenerētos validācijas kļūdu paziņojumus.
+
 ## [1.7.2] - 2026-06-03
 ### Pievienots (Added)
 - `HomeWebController`, kas nodrošina sistēmas saknes (`/`) automātisku novirzīšanu uz "Mani uzdevumi" un kalendāra paneli.

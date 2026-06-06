@@ -78,7 +78,7 @@
 
                             <div class="metadata-value">
                                 <th:block th:if="${card.metadata != null and card.metadata[field.name] != null and card.metadata[field.name] != ''}">
-                                    <th:block th:switch="${field.type}">
+                                    <th:block th:switch="${#strings.toString(field.type)}">
                                         <span th:case="'DATE'" th:text="${#temporals.format(T(java.time.LocalDate).parse(#strings.substring(card.metadata[field.name], 0, 10)), 'dd.MM.yyyy')}"></span>
                                         <span th:case="*" th:text="${card.metadata[field.name]}"></span>
                                     </th:block>

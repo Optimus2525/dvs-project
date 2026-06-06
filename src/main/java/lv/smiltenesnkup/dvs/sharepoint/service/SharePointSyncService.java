@@ -3,6 +3,7 @@ package lv.smiltenesnkup.dvs.sharepoint.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import lv.smiltenesnkup.dvs.document.enums.FieldType;
 import lv.smiltenesnkup.dvs.document.enums.FileRole;
 import lv.smiltenesnkup.dvs.document.model.DocumentCard;
 import lv.smiltenesnkup.dvs.document.model.DocumentFile;
@@ -75,16 +76,16 @@ public class SharePointSyncService {
                 continue;
             }
 
-            // Nosaka datu tipu
-            String type = "TEXT";
+            // Nosaka datu tipu, izmantojot stingro Enum
+            FieldType type = FieldType.TEXT;
             Map<String, Object> options = null;
 
-            if (col.has("dateTime")) type = "DATE";
-            if (col.has("boolean")) type = "CHECKBOX";
+            if (col.has("dateTime")) type = FieldType.DATE;
+            if (col.has("boolean")) type = FieldType.CHECKBOX;
 
             // Parsē Choice (Izvēlņu) opcijas, lai atjauninātu Dropdown vērtības
             if (col.has("choice")) {
-                type = "SELECT";
+                type = lv.smiltenesnkup.dvs.document.enums.FieldType.SELECT;
                 JsonNode choicesNode = col.get("choice").get("choices");
                 if (choicesNode != null && choicesNode.isArray()) {
                     List<String> choiceList = new ArrayList<>();

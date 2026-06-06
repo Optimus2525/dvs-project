@@ -5,64 +5,41 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
+import org.springframework.security.oauth2.client.oidc.web.logout.OidcClientInitiatedLogoutSuccessHandler;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.web.SecurityFilterChain;
 
 /**
- * Pagaidu drošības konfigurācija izstrādes fāzei.
- * Vēlāk šeit tiks integrēts Microsoft Entra ID (OAuth2).
+ * Drošības konfigurācija, kas integrēta ar Microsoft Entra ID (OAuth2/OIDC).
  */
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http, ClientRegistrationRepository clientRegistrationRepository) throws Exception {
+
+        // Konfigurē OIDC izrakstīšanos (lai izrakstītos arī no Microsoft sesijas)
+        OidcClientInitiatedLogoutSuccessHandler oidcLogoutSuccessHandler =
+                new OidcClientInitiatedLogoutSuccessHandler(clientRegistrationRepository);
+        oidcLogoutSuccessHandler.setPostLogoutRedirectUri("{baseUrl}/"); // Kur atgriezties pēc izrakstīšanās
+
         http
-                // Pagaidām izslēdz CSRF aizsardzību atvieglotai testēšanai
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        // Aizsargā visus administratora ceļus
-                        .requestMatchers("/admin/**", "/api/v1/admin/**").hasRole("ADMIN")
-                        // Pārējiem ceļiem pagaidām atļauj brīvu piekļuvi
-                        .anyRequest().permitAll()
+                        .requestMatchers("/css/**", "/js/**", "/images/**", "/webjars/**").permitAll()
+                        .anyRequest().authenticated()
                 )
-                // Ieslēdz iebūvēto pieteikšanās formu
-                .formLogin(form -> form
-                        .defaultSuccessUrl("/documents/dashboard", true)
-                        .permitAll()
+                .oauth2Login(oauth2 -> oauth2
+                        .defaultSuccessUrl("/", true)
                 )
-                // Ieslēdz izrakstīšanās funkcionalitāti
                 .logout(logout -> logout
-                        .logoutSuccessUrl("/documents/dashboard")
+                        .clearAuthentication(true)
+                        .invalidateHttpSession(true)
+                        .logoutSuccessHandler(oidcLogoutSuccessHandler) // Izmanto OIDC izrakstīšanos
                         .permitAll()
                 );
 
         return http.build();
     }
-
-    /**
-     * Izveido pagaidu lietotājus atmiņā (In-Memory) lomu testēšanai.
-     * {noop} norāda, ka parole nav šifrēta (tikai izstrādes nolūkiem).
-     */
-    @Bean
-    public UserDetailsService userDetailsService() {
-        UserDetails user = User.builder()
-                .username("user")
-                .password("{noop}user")
-                .roles("USER")
-                .build();
-
-        UserDetails admin = User.builder()
-                .username("admin")
-                .password("{noop}admin")
-                .roles("ADMIN", "USER")
-                .build();
-
-        return new InMemoryUserDetailsManager(user, admin);
-    }
-
 }
