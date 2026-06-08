@@ -12,7 +12,7 @@
 
 	<groupId>lv.smiltenesnkup</groupId>
 	<artifactId>dvs</artifactId>
-	<version>1.9.0</version>
+	<version>1.10.0</version>
 	<name>dvs</name>
 	<description>Dokumentu Vadības Sistēma</description>
 

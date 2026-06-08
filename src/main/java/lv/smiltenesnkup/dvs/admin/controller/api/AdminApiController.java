@@ -4,10 +4,13 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import lv.smiltenesnkup.dvs.admin.dto.DocumentListCreateRequestDTO;
+import lv.smiltenesnkup.dvs.admin.dto.DvsUserManageDTO;
+import lv.smiltenesnkup.dvs.admin.service.UserManagementService;
 import lv.smiltenesnkup.dvs.calendar.dto.CalendarCategoryDTO;
 import lv.smiltenesnkup.dvs.calendar.service.CalendarService;
 import lv.smiltenesnkup.dvs.document.dto.DocumentListDTO;
 import lv.smiltenesnkup.dvs.document.service.DocumentListService;
+import lv.smiltenesnkup.dvs.sharepoint.service.SharePointGraphService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import lv.smiltenesnkup.dvs.admin.dto.UiSettingsUpdateRequestDTO;
@@ -24,6 +27,31 @@ public class AdminApiController {
     private final UiSettingService uiSettingService;
     private final CalendarService calendarService;
     private final SharePointSyncService sharePointSyncService;
+    private final UserManagementService userManagementService;
+    private final SharePointGraphService sharePointGraphService;
+
+
+    // --- LIETOTĀJU PĀRVALDĪBA ---
+
+    @GetMapping("/users/search-entra")
+    public ResponseEntity<java.util.List<String>> searchEntraUsers(@RequestParam String query) {
+        log.info("Admin meklē lietotāju Entra ID Graph API: {}", query);
+        // ŠIS sauc Graph API, atšķirībā no TaskApiController, kas sauc lokālo DB
+        return ResponseEntity.ok(sharePointGraphService.searchUsers(query));
+    }
+
+
+    @GetMapping("/users")
+    public ResponseEntity<java.util.List<DvsUserManageDTO>> getAllUsers() {
+        return ResponseEntity.ok(userManagementService.getAllUsers());
+    }
+
+
+    @PostMapping("/users")
+    public ResponseEntity<DvsUserManageDTO> saveUser(@RequestBody DvsUserManageDTO dto) {
+        return ResponseEntity.ok(userManagementService.saveOrUpdateUser(dto));
+    }
+
 
     // --- KALENDĀRA KATEGORIJAS ---
 

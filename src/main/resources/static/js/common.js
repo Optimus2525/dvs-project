@@ -31,6 +31,9 @@ window.EntraUserSelector = class {
         this.isMultiple = options.isMultiple || false;
         this.onUserAdded = options.onUserAdded || null;
 
+        // JAUNUMS: Ļauj norādīt API galapunktu (pēc noklusējuma lokālā bāze)
+        this.searchUrl = options.searchUrl || '/api/v1/tasks/users/search';
+
         this.selectedUsers = [];
         this.initListeners();
     }
@@ -38,7 +41,8 @@ window.EntraUserSelector = class {
     async resolveApi(query) {
         if (!query || query.trim().length < 2) return null;
         try {
-            const res = await fetch(`/api/v1/tasks/users/search?query=${encodeURIComponent(query.trim())}`);
+            // ATJAUNOTS: Izmanto this.searchUrl
+            const res = await fetch(`${this.searchUrl}?query=${encodeURIComponent(query.trim())}`);
             if (res.ok) {
                 const users = await res.json();
                 if (users.length > 0) return users[0];
@@ -58,7 +62,8 @@ window.EntraUserSelector = class {
             }
 
             if (val.length < 2) return;
-            fetch(`/api/v1/tasks/users/search?query=${encodeURIComponent(val)}`)
+            // ATJAUNOTS: Izmanto this.searchUrl
+            fetch(`${this.searchUrl}?query=${encodeURIComponent(val)}`)
                 .then(res => res.json()).then(users => {
                 this.datalist.innerHTML = '';
                 users.forEach(u => this.datalist.appendChild(Object.assign(document.createElement('option'), {value: u})));

@@ -3,6 +3,24 @@
 Visi ievērojamie šī projekta labojumi tiks dokumentēti šajā failā.
 Projekts ievēro [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.0] - 2026-06-08
+### Pievienots
+- "Vārtu sarga" (Gatekeeper) drošības modelis – ielogoties DVS var tikai tie Entra ID lietotāji, kuri ir reģistrēti lokālajā `dvs_user` tabulā.
+- Pielāgots OIDC serviss (`CustomOidcUserService`), kas sasaista Microsoft sesiju ar lokālajām sistēmas lomām (`app_user_role`).
+- Smuks kļūdas skats (`/access-denied`) bloķētiem vai nereģistrētiem lietotājiem.
+- Jauns Administratora paneļa modulis: Lietotāju Pārvaldība un Tiesības (RBAC sarakstu līmenī).
+- Kalendāra Popover lodziņos pievienota informācija par notikuma autoru un uzaicinātajām personām.
+- DB migrācijas `V14__user_roles.sql` un `V15__dvs_users_and_list_permissions.sql`.
+
+### Mainīts
+- Ikdienas lietotāju meklētājs (Uzdevumos un Kalendārā) tagad meklē tikai starp reģistrētiem DVS lietotājiem, bet Admin panelis turpina izmantot globālo Microsoft Graph API.
+- Universālajai `EntraUserSelector` JS klasei pievienota iespēja norādīt dinamiskus API galapunktus un `setDisabled` metode Read-Only režīmam.
+- Kalendāra rediģēšanas modālais logs tagad atpazīst lietotāja lomu – uzaicinātās personas formu redz Read-Only (Tikai lasīt) režīmā.
+
+### Izlabots
+- Novērsta `NullPointerException` kļūda datubāzē pie kalendāra notikumu saglabāšanas, pievienojot manuālu DTO datu kartēšanu gadījumos, kad MapStruct nav pārbūvējis klases.
+- Izlabota JavaScript Scope (redzamības) kļūda `dashboard.js` failā, kas iepriekš bloķēja kalendāra renderēšanu.
+
 ## [1.9.0] - 2026-06-08
 ### Pievienots
 - Microsoft Entra ID (Azure AD) lietotāju globālā meklēšana Uzdevumu un Kalendāra formās.

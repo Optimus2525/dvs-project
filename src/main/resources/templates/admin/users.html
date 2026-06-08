@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="lv" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/base :: layout(~{::section})}">
+<body>
+<section>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="h4 mb-1">Lietotāju Pārvaldība un Tiesības</h2>
+            <p class="text-muted mb-0">Reģistrējiet DVS lietotājus un piešķiriet tiem piekļuves līmeņus.</p>
+        </div>
+        <button class="btn btn-primary" onclick="openUserModal()">+ Pievienot Lietotāju</button>
+    </div>
+
+    <div class="card shadow-sm border-secondary">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">Lietotājs</th>
+                        <th>Statuss</th>
+                        <th>Loma</th>
+                        <th class="text-end pe-4">Darbības</th>
+                    </tr>
+                    </thead>
+                    <tbody id="usersTableBody">
+                    <!-- Dati tiks ģenerēti dinamiski -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modālais logs -->
+    <div class="modal fade" id="userModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title fw-bold" id="modalTitle">Lietotāja Tiesības</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="userForm">
+                        <div id="userAlert" class="alert alert-danger d-none"></div>
+
+                        <!-- Jauna lietotāja meklēšana no Entra ID -->
+                        <div class="mb-4" id="searchContainer">
+                            <label class="form-label fw-bold text-primary">Meklēt uzņēmuma (Entra ID) darbinieku <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control border-primary" id="newUserName" list="newUserList" autocomplete="off" placeholder="Vārds + Enter">
+                            <datalist id="newUserList"></datalist>
+                        </div>
+
+                        <!-- Esoša lietotāja vārds (Rediģēšanas režīms) -->
+                        <div class="mb-4 d-none" id="staticNameContainer">
+                            <label class="form-label fw-bold">Lietotājs</label>
+                            <input type="text" class="form-control fw-bold bg-light" id="staticUserName" readonly>
+                        </div>
+
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="form-check form-switch mt-2">
+                                    <input class="form-check-input" type="checkbox" id="userActive" checked>
+                                    <label class="form-check-label fw-bold" for="userActive">Aktīvs konts (drīkst ielogoties)</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch mt-2">
+                                    <input class="form-check-input" type="checkbox" id="userAdmin">
+                                    <label class="form-check-label fw-bold text-danger" for="userAdmin">Sistēmas Administrators</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr>
+                        <h6 class="fw-bold mb-3">Piekļuve Dokumentu Sarakstiem</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered align-middle">
+                                <thead class="table-light">
+                                <tr>
+                                    <th>Saraksts</th>
+                                    <th style="width: 200px;">Tiesību līmenis</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr th:each="list : ${documentLists}">
+                                    <td th:text="${list.name}"></td>
+                                    <td>
+                                        <select class="form-select form-select-sm permission-select" th:data-list-id="${list.id}">
+                                            <option value="NONE">Nav piekļuves</option>
+                                            <option value="READ_ONLY">Tikai lasīt</option>
+                                            <option value="EDITOR">Rediģēt un pievienot</option>
+                                        </select>
+                                    </td>
+                                </tr>
+                                <tr th:if="${#lists.isEmpty(documentLists)}">
+                                    <td colspan="2" class="text-center text-muted">Sistēmā vēl nav izveidots neviens dokumentu saraksts.</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Atcelt</button>
+                    <button type="button" class="btn btn-primary" id="saveUserBtn">Saglabāt</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const tbody = document.getElementById('usersTableBody');
+            const modal = new bootstrap.Modal(document.getElementById('userModal'));
+            let currentUsers = [];
+
+            // INICIALIZĒJAM MŪSU UNIVERSĀLO KLASI, BET NORĀDĀM GRAPH API GALAPUNKTU!
+            const entraSelector = new EntraUserSelector({
+                inputId: 'newUserName',
+                datalistId: 'newUserList',
+                isMultiple: false,
+                searchUrl: '/api/v1/admin/users/search-entra', // Sauc pa tiešo Microsoft Graph!
+                alertBoxId: 'userAlert'
+            });
+
+            async function loadUsers() {
+                try {
+                    const res = await fetch('/api/v1/admin/users');
+                    if (res.ok) {
+                        currentUsers = await res.json();
+                        renderTable();
+                    }
+                } catch (err) { console.error(err); }
+            }
+
+            function renderTable() {
+                tbody.innerHTML = '';
+                currentUsers.forEach(u => {
+                    const tr = document.createElement('tr');
+
+                    const tdName = document.createElement('td');
+                    tdName.className = 'ps-4 fw-bold';
+                    tdName.textContent = u.username;
+
+                    const tdStatus = document.createElement('td');
+                    tdStatus.innerHTML = u.active ? '<span class="badge bg-success">Aktīvs</span>' : '<span class="badge bg-danger">Bloķēts</span>';
+
+                    const tdRole = document.createElement('td');
+                    tdRole.innerHTML = u.admin ? '<span class="badge bg-danger">Administrators</span>' : '<span class="badge bg-secondary">Lietotājs</span>';
+
+                    const tdActions = document.createElement('td');
+                    tdActions.className = 'text-end pe-4';
+                    const editBtn = document.createElement('button');
+                    editBtn.className = 'btn btn-sm btn-outline-primary';
+                    editBtn.textContent = 'Pārvaldīt';
+                    editBtn.onclick = () => openUserModal(u);
+                    tdActions.appendChild(editBtn);
+
+                    tr.append(tdName, tdStatus, tdRole, tdActions);
+                    tbody.appendChild(tr);
+                });
+            }
+
+            window.openUserModal = function(user = null) {
+                document.getElementById('userForm').reset();
+                document.getElementById('userAlert').classList.add('d-none');
+                entraSelector.clear();
+
+                // Atiestata visas sarakstu izvēlnes uz "NONE"
+                document.querySelectorAll('.permission-select').forEach(select => select.value = 'NONE');
+
+                if (user) {
+                    document.getElementById('modalTitle').innerText = 'Rediģēt Lietotāju';
+                    document.getElementById('searchContainer').classList.add('d-none');
+                    document.getElementById('staticNameContainer').classList.remove('d-none');
+                    document.getElementById('staticUserName').value = user.username;
+
+                    document.getElementById('userActive').checked = user.active;
+                    document.getElementById('userAdmin').checked = user.admin;
+
+                    // Iestata sarakstu tiesības
+                    if (user.listPermissions) {
+                        Object.keys(user.listPermissions).forEach(listId => {
+                            const select = document.querySelector(`.permission-select[data-list-id='${listId}']`);
+                            if (select) select.value = user.listPermissions[listId];
+                        });
+                    }
+                } else {
+                    document.getElementById('modalTitle').innerText = 'Pievienot Jaunu Lietotāju';
+                    document.getElementById('searchContainer').classList.remove('d-none');
+                    document.getElementById('staticNameContainer').classList.add('d-none');
+
+                    document.getElementById('userActive').checked = true;
+                    document.getElementById('userAdmin').checked = false;
+                }
+                modal.show();
+            };
+
+            document.getElementById('saveUserBtn').addEventListener('click', async function() {
+                const isNew = document.getElementById('searchContainer').classList.contains('d-none') === false;
+
+                // Ja jauns lietotājs, ņemam vārdu no mūsu JS klases
+                const username = isNew ? entraSelector.getValues() : document.getElementById('staticUserName').value;
+
+                if (!username || username === 'Meklē...') {
+                    const alertBox = document.getElementById('userAlert');
+                    alertBox.innerText = "Lūdzu, izvēlieties derīgu lietotāju!";
+                    alertBox.classList.remove('d-none');
+                    return;
+                }
+
+                const listPermissions = {};
+                document.querySelectorAll('.permission-select').forEach(select => {
+                    if (select.value !== 'NONE') {
+                        listPermissions[select.getAttribute('data-list-id')] = select.value;
+                    }
+                });
+
+                const payload = {
+                    username: username,
+                    active: document.getElementById('userActive').checked,
+                    admin: document.getElementById('userAdmin').checked,
+                    listPermissions: listPermissions
+                };
+
+                try {
+                    const res = await fetch('/api/v1/admin/users', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!res.ok) throw new Error("Neizdevās saglabāt lietotāju.");
+
+                    modal.hide();
+                    loadUsers();
+                } catch (err) {
+                    const alertBox = document.getElementById('userAlert');
+                    alertBox.innerText = err.message;
+                    alertBox.classList.remove('d-none');
+                }
+            });
+
+            loadUsers();
+        });
+    </script>
+</section>
+</body>
+</html>

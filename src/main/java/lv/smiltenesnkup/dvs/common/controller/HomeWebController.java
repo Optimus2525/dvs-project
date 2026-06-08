@@ -20,4 +20,13 @@ public class HomeWebController {
         return "redirect:/tasks/my-tasks";
     }
 
+
+    /**
+     * Parāda kļūdas lapu lietotājiem, kuri veiksmīgi ielogojās Entra ID, bet nav reģistrēti DVS lokālajā bāzē.
+     */
+    @GetMapping("/access-denied")
+    public String showAccessDenied() {
+        return "error/access-denied";
+    }
+
 }

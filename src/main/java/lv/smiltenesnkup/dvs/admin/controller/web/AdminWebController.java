@@ -2,6 +2,7 @@ package lv.smiltenesnkup.dvs.admin.controller.web;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import lv.smiltenesnkup.dvs.document.service.DocumentListService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -15,6 +16,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 @RequestMapping("/admin")
 @RequiredArgsConstructor
 public class AdminWebController {
+
+    private final DocumentListService documentListService;
 
     /**
      * Atgriež Administratora galvenā paneļa skatu.
@@ -55,6 +58,16 @@ public class AdminWebController {
         log.info("Tiek atvērts administratora kalendāra kategoriju skats");
         model.addAttribute("pageTitle", "Kalendāra Kategorijas - DVS Admin");
         return "admin/calendar-categories";
+    }
+
+
+    @GetMapping("/users")
+    public String showUsersManagement(Model model) {
+        log.info("Tiek atvērts lietotāju pārvaldības skats");
+        model.addAttribute("pageTitle", "Lietotāju Pārvaldība - DVS Admin");
+        // Padodam visus sarakstus, lai UI varētu sazīmēt tiesību tabulu
+        model.addAttribute("documentLists", documentListService.getAllDocumentLists());
+        return "admin/users";
     }
 
 }

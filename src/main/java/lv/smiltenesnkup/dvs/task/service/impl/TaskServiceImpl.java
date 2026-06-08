@@ -2,6 +2,7 @@ package lv.smiltenesnkup.dvs.task.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import lv.smiltenesnkup.dvs.security.repository.DvsUserRepository;
 import lv.smiltenesnkup.dvs.task.dto.NotificationDTO;
 import lv.smiltenesnkup.dvs.task.dto.SubTaskDTO;
 import lv.smiltenesnkup.dvs.task.dto.TaskDTO;
@@ -39,7 +40,8 @@ public class TaskServiceImpl implements TaskService {
     private final NotificationRepository notificationRepository;
     private final TaskMapper taskMapper;
     private final NotificationMapper notificationMapper;
-    private final SharePointGraphService graphService;
+    private final SharePointGraphService graphService; // Šo vēlāk izmantosim Admin panelim
+    private final DvsUserRepository dvsUserRepository; // Pievienojam jauno repozitoriju
 
     @Override
     @Transactional(readOnly = true)
@@ -272,8 +274,9 @@ public class TaskServiceImpl implements TaskService {
     @Override
     @org.springframework.cache.annotation.Cacheable(value = "userSearch", key = "#query")
     public List<String> searchUsers(String query) {
-        log.info("Meklē lietotājus Entra ID caur Graph API pēc atslēgvārda: {}", query);
-        return graphService.searchUsers(query);
+        log.info("Meklē DVS lietotājus lokālajā datubāzē pēc atslēgvārda: {}", query);
+        // ATJAUNOTS: Tagad atgriež TIKAI tos lietotājus, kuri ir reģistrēti DVS sistēmā!
+        return dvsUserRepository.searchActiveUsersByUsername(query);
     }
 
 }
