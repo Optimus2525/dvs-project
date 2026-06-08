@@ -32,6 +32,11 @@ public interface TaskService {
     List<TaskDTO> getTasksForFollower(String follower);
 
     /**
+     * Meklē lietotājus sistēmā (Microsoft Entra ID) pēc atslēgvārda.
+     */
+    List<String> searchUsers(String query);
+
+    /**
      * Atjaunina apakšuzdevuma datus (statusu un aprakstu) un apstrādā darbplūsmas (Workflow) loģiku.
      */
     void updateSubTask(Long subTaskId, String newStatus, String description);

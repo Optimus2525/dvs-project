@@ -29,9 +29,15 @@ public interface CalendarService {
     void deleteCategory(Long id);
 
     /**
-     * Izgūst visus notikumus norādītajā laika periodā (piem., aktuālajā mēnesī).
+     * Izgūst visus notikumus norādītajā laika periodā konkrētam lietotājam.
      */
-    List<CalendarEventDTO> getEventsInPeriod(LocalDateTime start, LocalDateTime end);
+    List<CalendarEventDTO> getEventsInPeriod(LocalDateTime start, LocalDateTime end, String currentUser);
+
+    /**
+     * Pārbauda, vai lietotājam nav kalendāra konfliktu norādītajā laikā.
+     */
+    boolean hasScheduleConflict(String user, LocalDateTime start, LocalDateTime end);
+
 
     /**
      * Izveido jaunu lokālo notikumu un asinhroni nosūta to uz SharePoint.

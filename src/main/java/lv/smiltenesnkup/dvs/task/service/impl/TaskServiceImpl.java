@@ -18,6 +18,7 @@ import lv.smiltenesnkup.dvs.task.repository.TaskRepository;
 import lv.smiltenesnkup.dvs.common.exception.BusinessLogicException;
 import lv.smiltenesnkup.dvs.common.exception.ResourceNotFoundException;
 import lv.smiltenesnkup.dvs.task.service.TaskService;
+import lv.smiltenesnkup.dvs.sharepoint.service.SharePointGraphService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,6 +39,7 @@ public class TaskServiceImpl implements TaskService {
     private final NotificationRepository notificationRepository;
     private final TaskMapper taskMapper;
     private final NotificationMapper notificationMapper;
+    private final SharePointGraphService graphService;
 
     @Override
     @Transactional(readOnly = true)
@@ -265,6 +267,13 @@ public class TaskServiceImpl implements TaskService {
         return taskRepository.findAllByFollower(follower).stream()
                 .map(taskMapper::toDto)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    @org.springframework.cache.annotation.Cacheable(value = "userSearch", key = "#query")
+    public List<String> searchUsers(String query) {
+        log.info("Meklē lietotājus Entra ID caur Graph API pēc atslēgvārda: {}", query);
+        return graphService.searchUsers(query);
     }
 
 }

@@ -17,11 +17,20 @@ import java.util.Optional;
 public interface CalendarEventRepository extends JpaRepository<CalendarEvent, Long> {
 
     /**
-     * Atrod notikumus norādītajā laika periodā (piemēram, vienam mēnesim).
-     * Iekļauj notikumus, kas sākas, beidzas vai pārklājas ar norādīto periodu.
+     * Atrod notikumus norādītajā laika periodā, kurus izveidojis TIKAI norādītais lietotājs,
+     * VAI kuros norādītais lietotājs ir pievienots kā uzaicinātā persona.
      */
-    @Query("SELECT e FROM CalendarEvent e WHERE e.startTime <= :end AND e.endTime >= :start ORDER BY e.startTime ASC")
-    List<CalendarEvent> findEventsInPeriod(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+    @Query(value = "SELECT * FROM calendar_event WHERE start_time <= :end AND end_time >= :start " +
+            "AND (created_by = :user OR invited_persons @> jsonb_build_array(:user)) " +
+            "ORDER BY start_time ASC", nativeQuery = true)
+    List<CalendarEvent> findEventsInPeriodForUser(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end, @Param("user") String user);
+
+    /**
+     * Pārbauda, vai lietotājam jau nav ieplānots notikums norādītajā laika nogrieznī.
+     */
+    @Query(value = "SELECT COUNT(*) FROM calendar_event WHERE start_time < :end AND end_time > :start " +
+            "AND (created_by = :user OR invited_persons @> jsonb_build_array(:user))", nativeQuery = true)
+    long countOverlappingEventsForUser(@Param("user") String user, @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
     /**
      * Atrod lokālo notikumu pēc tā SharePoint Graph API identifikatora.

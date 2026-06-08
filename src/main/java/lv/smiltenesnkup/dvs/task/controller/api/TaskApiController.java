@@ -52,20 +52,13 @@ public class TaskApiController {
     }
 
     /**
-     * Imitē lietotāju meklēšanu no sistēmas (Azure AD) pēc vārda fragmenta.
+     * Meklē lietotājus no sistēmas (Microsoft Entra ID) pēc vārda fragmenta.
      * Tiek izmantots autocompletion funkcionalitātei frontend pusē.
      */
     @GetMapping("/users/search")
     public ResponseEntity<List<String>> searchUsers(@RequestParam String query) {
-        log.info("Tiek meklēti lietotāji pēc atslēgvārda: {}", query);
-        // Pagaidu statisks saraksts, vēlāk tiks aizstāts ar reālu Azure AD / DB pieprasījumu
-        List<String> allUsers = List.of("Jānis Bērziņš", "Ilze Kalniņa", "Pēteris Kļaviņš", "Anna Zariņa", "Lietotājs");
-
-        List<String> filtered = allUsers.stream()
-                .filter(user -> user.toLowerCase().contains(query.toLowerCase()))
-                .collect(Collectors.toList());
-
-        return ResponseEntity.ok(filtered);
+        log.info("Tiek saņemts REST pieprasījums lietotāju meklēšanai: {}", query);
+        return ResponseEntity.ok(taskService.searchUsers(query));
     }
 
     // ==========================================
@@ -76,7 +69,8 @@ public class TaskApiController {
      * Atgriež visus neizlasītos paziņojumus konkrētam lietotājam.
      */
     @GetMapping("/notifications")
-    public ResponseEntity<List<NotificationDTO>> getUnreadNotifications(@RequestParam String user) {
+    public ResponseEntity<List<NotificationDTO>> getUnreadNotifications(java.security.Principal principal) {
+        String user = principal.getName();
         log.info("Tiek pieprasīti neizlasītie paziņojumi lietotājam: {}", user);
         return ResponseEntity.ok(taskService.getUnreadNotifications(user));
     }

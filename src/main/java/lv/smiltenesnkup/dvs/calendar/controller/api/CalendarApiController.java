@@ -25,14 +25,28 @@ public class CalendarApiController {
     private final CalendarService calendarService;
 
     /**
-     * Izgūst notikumus norādītajā laika periodā (piem., aktuālajam mēnesim).
+     * Izgūst notikumus norādītajā laika periodā konkrētam lietotājam.
      */
     @GetMapping("/events")
     public ResponseEntity<List<CalendarEventDTO>> getEvents(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end,
+            java.security.Principal principal) {
+        // Lietotājs tiek nolasīts no Entra ID sesijas
+        String user = principal.getName();
+        log.info("REST pieprasījums kalendāra notikumiem no {} līdz {} lietotājam {}", start, end, user);
+        return ResponseEntity.ok(calendarService.getEventsInPeriod(start, end, user));
+    }
+
+    /**
+     * Pārbauda kalendāra konfliktus (Availability check).
+     */
+    @GetMapping("/events/check-conflict")
+    public ResponseEntity<Boolean> checkConflict(
+            @RequestParam String user,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end) {
-        log.info("REST pieprasījums kalendāra notikumiem no {} līdz {}", start, end);
-        return ResponseEntity.ok(calendarService.getEventsInPeriod(start, end));
+        return ResponseEntity.ok(calendarService.hasScheduleConflict(user, start, end));
     }
 
     /**

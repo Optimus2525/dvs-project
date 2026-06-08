@@ -41,4 +41,8 @@ public class CalendarEventDTO {
     private String categoryName;
 
     private String categoryColor;
+
+    private String createdBy;
+    private java.util.List<String> invitedPersons;
+
 }

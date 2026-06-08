@@ -24,6 +24,7 @@ public class CalendarEventUpdateDTO {
     private LocalDateTime endTime;
     private Boolean allDay;
     private Long categoryId;
+    private java.util.List<String> invitedPersons;
 
 
 }

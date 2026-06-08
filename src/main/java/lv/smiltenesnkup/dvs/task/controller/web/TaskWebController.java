@@ -27,16 +27,15 @@ public class TaskWebController {
      * Parametrs 'user' tiek izmantots testēšanai, lai simulētu dažādus pieslēgušos lietotājus.
      */
     @GetMapping("/my-tasks")
-    public String showMyTasks(@RequestParam(required = false, defaultValue = "Lietotājs") String user, Model model) {
+    public String showMyTasks(Model model, java.security.Principal principal) {
+        // Iegūst reālo Entra ID lietotāju no drošās sesijas
+        String user = principal.getName();
         log.info("Tiek atvērts Lietotāja Galvenais Panelis lietotājam: {}", user);
 
         model.addAttribute("pageTitle", "Galvenais Panelis - DVS");
         model.addAttribute("currentUser", user);
 
-        // Piesaista kalendāra kategorijas
         model.addAttribute("categories", calendarService.getActiveCategories());
-
-        // Piesaista abus uzdevumu sarakstus
         model.addAttribute("assignedTasks", taskService.getTasksForAssignee(user));
         model.addAttribute("followedTasks", taskService.getTasksForFollower(user));
 

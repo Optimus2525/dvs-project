@@ -1,5 +1,57 @@
 document.addEventListener('DOMContentLoaded', function() {
-    const currentUser = document.getElementById('currentTestUser') ? document.getElementById('currentTestUser').value : 'Lietotājs';
+    // 1. Ielasa reālo Entra ID lietotāju no slēptā lauka
+    const currentUser = document.getElementById('loggedInUser') ? document.getElementById('loggedInUser').value : '';
+
+    // ==========================================
+    // ENTRA ID LIETOTĀJU MEKLĒTĀJU INICIALIZĀCIJA
+    // ==========================================
+
+    // 1. Uzdevuma Atbildīgais (Single-select)
+    const assigneeSelector = new EntraUserSelector({
+        inputId: 'taskAssignee',
+        datalistId: 'assigneeList',
+        isMultiple: false,
+        alertBoxId: 'createTaskAlert'
+    });
+
+    // 2. Uzdevuma Sekotāji (Multi-select)
+    const followersSelector = new EntraUserSelector({
+        inputId: 'taskFollowerInput',
+        datalistId: 'followerList',
+        pillsContainerId: 'followersPills',
+        isMultiple: true,
+        alertBoxId: 'createTaskAlert'
+    });
+
+    // 3. Kalendāra Uzaicinātās personas (Multi-select + Konfliktu pārbaude)
+    const inviteesSelector = new EntraUserSelector({
+        inputId: 'eventInviteeInput',
+        datalistId: 'inviteeList',
+        pillsContainerId: 'inviteesPills',
+        isMultiple: true,
+        alertBoxId: 'eventAlert',
+        onUserAdded: async (userName, badgeElement) => {
+            const sVal = document.getElementById('eventStart').value;
+            const eVal = document.getElementById('eventEnd').value;
+            if (sVal && eVal) {
+                try {
+                    const formattedStart = sVal.length <= 10 ? sVal + "T00:00:00" : sVal;
+                    const formattedEnd = eVal.length <= 10 ? eVal + "T00:00:00" : eVal;
+                    const res = await fetch(`/api/v1/calendar/events/check-conflict?user=${encodeURIComponent(userName)}&start=${formattedStart}&end=${formattedEnd}`);
+                    const hasConflict = await res.json();
+
+                    if (hasConflict) {
+                        const warningIcon = document.createElement('i');
+                        warningIcon.className = 'text-danger ms-1 small';
+                        warningIcon.title = 'Šim lietotājam jau ir ieplānots cits notikums šajā laikā!';
+                        warningIcon.innerText = '(Aizņemts)';
+                        const closeBtn = badgeElement.querySelector('span.ms-2');
+                        badgeElement.insertBefore(warningIcon, closeBtn);
+                    }
+                } catch (err) { console.error("Konfliktu pārbaudes kļūda", err); }
+            }
+        }
+    });
 
     // ==========================================
     // KALENDĀRA LOĢIKA
@@ -84,12 +136,16 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             const formattedDate = formatPopoverDate(e.startTime, e.endTime, e.allDay);
+            // ATJAUNOTS: Pievieno Autoru un Uzaicinātās personas Popover lodziņam
+            const authorHtml = e.createdBy ? `<br><small class="text-muted"><strong class="text-dark">Autors:</strong> ${e.createdBy}</small>` : '';
+            const inviteesHtml = (e.invitedPersons && e.invitedPersons.length > 0) ? `<br><small class="text-muted"><strong class="text-dark">Uzaicinātie:</strong> ${e.invitedPersons.join(', ')}</small>` : '';
+
             eventDiv.setAttribute('data-bs-toggle', 'popover');
             eventDiv.setAttribute('data-bs-trigger', 'hover focus');
             eventDiv.setAttribute('data-bs-placement', 'top');
             eventDiv.setAttribute('data-bs-title', `<span class="fw-bold">${e.categoryName}</span>`);
             eventDiv.setAttribute('data-bs-html', 'true');
-            eventDiv.setAttribute('data-bs-content', `<strong>${e.title}</strong><br><small class="text-muted">${formattedDate}</small><br>${e.description ? `<hr class="my-1">${e.description}` : ''}`);
+            eventDiv.setAttribute('data-bs-content', `<strong>${e.title}</strong><br><small class="text-muted">${formattedDate}</small>${authorHtml}${inviteesHtml}<br>${e.description ? `<hr class="my-1">${e.description}` : ''}`);
 
             eventDiv.onclick = (evt) => {
                 evt.stopPropagation();
@@ -188,6 +244,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         async function fetchEvents(s, e) {
             try {
+                // ATJAUNOTS: API tagad pats zina, kurš ir lietotājs, mēs vairs netiek sūtīts ?user=
                 const res = await fetch(`/api/v1/calendar/events?start=${new Date(s.setHours(0,0,0,0)).toISOString()}&end=${new Date(e.setHours(23,59,59,999)).toISOString()}&_=${new Date().getTime()}`);
                 if (res.ok) events = await res.json();
             } catch (err) { console.error(err); }
@@ -200,12 +257,30 @@ document.addEventListener('DOMContentLoaded', function() {
         window.openEditEventModal = function(existingEvent = null, date = null) {
             document.getElementById('eventForm').reset();
             document.getElementById('eventAlert').classList.add('d-none');
+
+            inviteesSelector.clear();
+
+            // Pārbauda, vai pašreizējais lietotājs ir notikuma autors
+            const isCreator = !existingEvent || existingEvent.createdBy === currentUser;
+
+            // Bloķē laukus, ja lietotājs nav autors
+            document.getElementById('eventTitle').disabled = !isCreator;
+            document.getElementById('eventCategory').disabled = !isCreator;
+            document.getElementById('eventAllDay').disabled = !isCreator;
+            document.getElementById('eventDesc').disabled = !isCreator;
+            document.getElementById('saveEventBtn').style.display = isCreator ? 'inline-block' : 'none';
+
             if (existingEvent) {
-                document.getElementById('eventModalTitle').innerText = 'Rediģēt Notikumu';
+                document.getElementById('eventModalTitle').innerText = isCreator ? 'Rediģēt Notikumu' : 'Skatīt Notikumu';
                 document.getElementById('eventId').value = existingEvent.id;
                 document.getElementById('eventTitle').value = existingEvent.title;
                 document.getElementById('eventCategory').value = existingEvent.categoryId;
                 document.getElementById('eventAllDay').checked = existingEvent.allDay;
+
+                if (existingEvent.invitedPersons) {
+                    inviteesSelector.setValues(existingEvent.invitedPersons);
+                }
+
                 initEventFlatpickr(!existingEvent.allDay); fpStart.setDate(existingEvent.startTime); fpEnd.setDate(existingEvent.endTime);
             } else {
                 document.getElementById('eventModalTitle').innerText = 'Jauns Notikums';
@@ -216,11 +291,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 const endDate = new Date(startDate); endDate.setHours(startDate.getHours() + 1, 0, 0, 0);
                 fpStart.setDate(startDate); fpEnd.setDate(endDate);
             }
+
+            // Flatpickr datumu lauku bloķēšana (Flatpickr izveido slēpto lauku, bet rāda 'altInput' blakus)
+            const startInput = document.getElementById('eventStart').nextElementSibling;
+            if (startInput) startInput.disabled = !isCreator;
+            const endInput = document.getElementById('eventEnd').nextElementSibling;
+            if (endInput) endInput.disabled = !isCreator;
+
+            // Iespējo/Atspējo uzaicināto personu izvēlni izmantojot jauno klases metodi
+            inviteesSelector.setDisabled(!isCreator);
+
             eventModal.show();
         };
 
         document.getElementById('saveEventBtn').onclick = async () => {
-            // ATJAUNOTS: Datumu validācija (Beigas nevar būt pirms Sākuma)
             const selectedStart = fpStart.selectedDates[0];
             const selectedEnd = fpEnd.selectedDates[0];
 
@@ -228,7 +312,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const alertBox = document.getElementById('eventAlert');
                 alertBox.innerText = "Kļūda: Beigu datums un laiks nevar būt agrāks par sākuma datumu!";
                 alertBox.classList.remove('d-none');
-                return; // Pārtrauc saglabāšanu
+                return;
             }
 
             let sVal = document.getElementById('eventStart').value;
@@ -237,16 +321,36 @@ document.addEventListener('DOMContentLoaded', function() {
             if (eVal && eVal.length <= 10) eVal += "T00:00:00";
 
             const payload = {
-                title: document.getElementById('eventTitle').value, categoryId: document.getElementById('eventCategory').value,
-                startTime: sVal, endTime: eVal,
-                allDay: document.getElementById('eventAllDay').checked, description: document.getElementById('eventDesc').value
+                title: document.getElementById('eventTitle').value,
+                categoryId: document.getElementById('eventCategory').value,
+                startTime: sVal,
+                endTime: eVal,
+                allDay: document.getElementById('eventAllDay').checked,
+                description: document.getElementById('eventDesc').value,
+                createdBy: currentUser,
+                invitedPersons: inviteesSelector.getValues()
             };
+
             const eventId = document.getElementById('eventId').value;
             try {
-                const res = await fetch(eventId ? `/api/v1/calendar/events/${eventId}` : '/api/v1/calendar/events', { method: eventId ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                if (!res.ok) throw new Error(await res.text());
-                eventModal.hide(); renderCalendar();
-            } catch (err) { document.getElementById('eventAlert').innerText = err.message; document.getElementById('eventAlert').classList.remove('d-none'); }
+                const res = await fetch(eventId ? `/api/v1/calendar/events/${eventId}` : '/api/v1/calendar/events', {
+                    method: eventId ? 'PUT' : 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                // LABOJUMS: Pareizi noparsējam kļūdas JSON, lai nerādītu "jēlu" kodu lietotājam
+                if (!res.ok) {
+                    const errData = await res.json();
+                    throw new Error(errData.message || "Neizdevās saglabāt notikumu.");
+                }
+
+                eventModal.hide();
+                renderCalendar();
+            } catch (err) {
+                document.getElementById('eventAlert').innerText = err.message;
+                document.getElementById('eventAlert').classList.remove('d-none');
+            }
         };
 
         renderCalendar();
@@ -260,39 +364,6 @@ document.addEventListener('DOMContentLoaded', function() {
         flatpickr("#taskDueDate", { locale: "lv", altInput: true, altFormat: "d.m.Y", dateFormat: "Y-m-d", minDate: "today" });
         const editStartPicker = flatpickr("#editTaskStartDate", { locale: "lv", altInput: true, altFormat: "d.m.Y", dateFormat: "Y-m-d" });
         const editDuePicker = flatpickr("#editTaskDueDate", { locale: "lv", altInput: true, altFormat: "d.m.Y", dateFormat: "Y-m-d" });
-
-        let selectedFollowers = [];
-        const followerInput = document.getElementById('taskFollowerInput');
-        const followersPills = document.getElementById('followersPills');
-
-        function setupUserSearch(inputId, dataListId) {
-            document.getElementById(inputId)?.addEventListener('input', function() {
-                if (this.value.trim().length < 2) return;
-                fetch(`/api/v1/tasks/users/search?query=${encodeURIComponent(this.value.trim())}`)
-                    .then(res => res.json()).then(users => {
-                    const dl = document.getElementById(dataListId); dl.innerHTML = '';
-                    users.forEach(u => dl.appendChild(Object.assign(document.createElement('option'), {value: u})));
-                });
-            });
-        }
-        setupUserSearch('taskAssignee', 'assigneeList');
-        setupUserSearch('taskFollowerInput', 'followerList');
-
-        function addFollower(val) {
-            val = val.trim();
-            if (val && !selectedFollowers.includes(val)) {
-                selectedFollowers.push(val);
-                const badge = document.createElement('span'); badge.className = 'badge bg-info text-dark me-2 mb-2 p-2';
-                badge.innerHTML = `${val} <span class="ms-2 cursor-pointer text-danger fw-bold" style="cursor:pointer;">&times;</span>`;
-                badge.querySelector('span').onclick = () => { selectedFollowers = selectedFollowers.filter(f => f !== val); badge.remove(); };
-                followersPills.appendChild(badge);
-            }
-            if(followerInput) followerInput.value = '';
-        }
-        if(followerInput) {
-            followerInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); addFollower(this.value); } });
-            followerInput.addEventListener('change', function() { addFollower(this.value); });
-        }
 
         const taskTypeSelect = document.getElementById('taskType');
         const mainAssigneeContainer = document.getElementById('mainAssigneeContainer');
@@ -328,9 +399,15 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('saveTaskBtn').onclick = async () => {
                 const formatToISO = (dateStr) => { if (!dateStr) return null; if (dateStr.includes('-')) return dateStr; const p = dateStr.split('.'); return `${p[2]}-${p[1]}-${p[0]}`; };
                 const payload = {
-                    taskType: taskTypeSelect.value, title: document.getElementById('taskTitle').value, startDate: formatToISO(document.getElementById('taskStartDate').value),
-                    dueDate: formatToISO(document.getElementById('taskDueDate').value), assignee: taskTypeSelect.value !== 'REGULAR' ? currentUser : document.getElementById('taskAssignee').value,
-                    createdBy: currentUser, followers: selectedFollowers, description: document.getElementById('taskDescription').value, priority: "NORMAL", status: "Nav sākts", subTasks: []
+                    taskType: taskTypeSelect.value,
+                    title: document.getElementById('taskTitle').value,
+                    startDate: formatToISO(document.getElementById('taskStartDate').value),
+                    dueDate: formatToISO(document.getElementById('taskDueDate').value),
+                    assignee: taskTypeSelect.value !== 'REGULAR' ? currentUser : assigneeSelector.getValues(),
+                    followers: followersSelector.getValues(),
+                    createdBy: currentUser,
+                    description: document.getElementById('taskDescription').value,
+                    priority: "NORMAL", status: "Nav sākts", subTasks: []
                 };
                 document.querySelectorAll('.subtask-row').forEach(row => {
                     if (taskTypeSelect.value !== 'REGULAR') payload.subTasks.push({ title: "Apakšuzdevums", assignee: row.querySelector('.subtask-assignee').value, dueDate: formatToISO(row.querySelector('.subtask-date').value), description: row.querySelector('.subtask-desc').value });
@@ -383,7 +460,8 @@ document.addEventListener('DOMContentLoaded', function() {
         // POPOVER (TOAST) PAZIŅOJUMI
         // ==========================================
         function fetchNotifications() {
-            fetch(`/api/v1/tasks/notifications?user=${encodeURIComponent(currentUser)}`)
+            // ATJAUNOTS: Arī šeit API pats nolasa lietotāju
+            fetch(`/api/v1/tasks/notifications`)
                 .then(res => res.json()).then(notifications => {
                 const container = document.getElementById('toastContainer');
                 if(!container) return;

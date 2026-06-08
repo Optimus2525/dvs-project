@@ -101,6 +101,44 @@ public class SharePointGraphService {
         return headers;
     }
 
+
+    /**
+     * Meklē Microsoft Entra ID lietotājus pēc vārda vai e-pasta fragmenta.
+     */
+    public java.util.List<String> searchUsers(String query) {
+        // Aizsargā pret Graph API sintakses kļūdām, ja ievadē ir apostrofs
+        String safeQuery = query.replace("'", "''");
+
+        // Meklē pēc Vārda Uzvārda vai E-pasta, atgriežot maksimāli 10 rezultātus
+        String url = String.format("https://graph.microsoft.com/v1.0/users?$filter=startswith(displayName,'%s') or startswith(userPrincipalName,'%s')&$select=displayName,userPrincipalName&$top=10", safeQuery, safeQuery);
+
+        log.info("Pieprasa lietotājus no Graph API: {}", url);
+
+        java.util.List<String> users = new java.util.ArrayList<>();
+        try {
+            String response = executeWithRetry(() ->
+                    restTemplate.exchange(url, HttpMethod.GET, new HttpEntity<>(createAuthHeaders()), String.class)
+            );
+
+            JsonNode valueNode = objectMapper.readTree(response).get("value");
+            if (valueNode != null && valueNode.isArray()) {
+                for (JsonNode node : valueNode) {
+                    if (node.has("displayName")) {
+                        users.add(node.get("displayName").asText());
+                    }
+                }
+            }
+        } catch (org.springframework.web.client.HttpClientErrorException.Forbidden e) {
+            // Noķer 403 kļūdu, lai nebrūk visa sistēma, un izvada brīdinājumu
+            log.warn("Nav tiesību (403 Forbidden) lasīt Entra ID lietotājus. Pārbaudi 'User.Read.All' (Application) tiesības Azure Portal! Detaļas: {}", e.getResponseBodyAsString());
+        } catch (Exception e) {
+            log.error("Kļūda parsējot Graph API atbildi lietotāju meklēšanai", e);
+        }
+
+        return users; // Ja ir kļūda, atgriež tukšu sarakstu, lai UI var turpināt darbu
+    }
+
+
     /**
      * Nolasa visas kolonnas (lauku definīcijas) no konkrēta SharePoint saraksta.
      */

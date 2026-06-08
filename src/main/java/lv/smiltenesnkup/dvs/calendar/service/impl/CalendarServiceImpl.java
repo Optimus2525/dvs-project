@@ -97,12 +97,29 @@ public class CalendarServiceImpl implements CalendarService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<CalendarEventDTO> getEventsInPeriod(LocalDateTime start, LocalDateTime end) {
-        log.info("Izgūst kalendāra notikumus periodam: {} - {}", start, end);
-        // Šeit nākotnē var tikt izsaukta SharePointGraphService sinhronizācijas metode
-        return eventRepository.findEventsInPeriod(start, end).stream()
-                .map(eventMapper::toDto)
+    public List<CalendarEventDTO> getEventsInPeriod(LocalDateTime start, LocalDateTime end, String currentUser) {
+        log.info("Izgūst kalendāra notikumus periodam: {} - {} lietotājam: {}", start, end, currentUser);
+        return eventRepository.findEventsInPeriodForUser(start, end, currentUser).stream()
+                .map(entity -> {
+                    CalendarEventDTO dto = eventMapper.toDto(entity);
+                    // DROŠĪBAS LABOJUMS: Ja MapStruct nav pārkompilējies, ieliekam datus manuāli!
+                    if (dto.getInvitedPersons() == null && entity.getInvitedPersons() != null) {
+                        dto.setInvitedPersons(entity.getInvitedPersons());
+                    }
+                    if (dto.getCreatedBy() == null && entity.getCreatedBy() != null) {
+                        dto.setCreatedBy(entity.getCreatedBy());
+                    }
+                    return dto;
+                })
                 .collect(Collectors.toList());
+    }
+
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean hasScheduleConflict(String user, LocalDateTime start, LocalDateTime end) {
+        long count = eventRepository.countOverlappingEventsForUser(user, start, end);
+        return count > 0;
     }
 
 
@@ -112,6 +129,15 @@ public class CalendarServiceImpl implements CalendarService {
         log.info("Izveido jaunu kalendāra notikumu: {}", dto.getTitle());
 
         CalendarEvent entity = eventMapper.toEntity(dto);
+
+        // DROŠĪBAS LABOJUMS: Ja MapStruct nav pārkompilējies, iestatām vērtības manuāli
+        if (entity.getCreatedBy() == null) {
+            entity.setCreatedBy(dto.getCreatedBy() != null ? dto.getCreatedBy() : "Lietotājs");
+        }
+        if (entity.getInvitedPersons() == null && dto.getInvitedPersons() != null) {
+            entity.setInvitedPersons(dto.getInvitedPersons());
+        }
+
         CalendarEvent savedEntity = eventRepository.save(entity);
 
         // TODO: Asinhroni nosūtīt `savedEntity` uz Graph API un atjaunināt `sharepointItemId`
@@ -135,6 +161,8 @@ public class CalendarServiceImpl implements CalendarService {
         if (updateDTO.getEndTime() != null) existingEvent.setEndTime(updateDTO.getEndTime());
         if (updateDTO.getAllDay() != null) existingEvent.setAllDay(updateDTO.getAllDay());
         if (updateDTO.getCategoryId() != null) existingEvent.setCategory(eventMapper.mapCategory(updateDTO.getCategoryId()));
+        // Pievienota uzaicināto personu atjaunināšana
+        if (updateDTO.getInvitedPersons() != null) existingEvent.setInvitedPersons(updateDTO.getInvitedPersons());
 
         CalendarEvent savedEvent = eventRepository.save(existingEvent);
 

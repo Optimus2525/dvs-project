@@ -15,11 +15,11 @@ public class CacheConfig {
 
     /**
      * Definē noklusējuma kešatmiņas pārvaldnieku (In-Memory).
-     * Tiek reģistrēts kešs "calendarCategories", ko izmanto Kalendāra serviss.
+     * Tiek reģistrēts kešs "calendarCategories" un "userSearch".
      */
     @Bean
     public CacheManager cacheManager() {
-        return new ConcurrentMapCacheManager("calendarCategories");
+        return new ConcurrentMapCacheManager("calendarCategories", "userSearch");
     }
 
 }

@@ -3,6 +3,22 @@
 Visi ievērojamie šī projekta labojumi tiks dokumentēti šajā failā.
 Projekts ievēro [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.0] - 2026-06-08
+### Pievienots
+- Microsoft Entra ID (Azure AD) lietotāju globālā meklēšana Uzdevumu un Kalendāra formās.
+- Universāla Vanilla JS klase `EntraUserSelector` lietotāju atlasei.
+- Kalendāra notikumu konfliktu pārbaude (Availability check) reāllaikā.
+- Read-Only režīms kalendāra notikumiem (uzaicinātajām personām).
+- DB migrācija `V13__calendar_event_users.sql`.
+
+### Mainīts
+- Pilnīga pāreja uz Spring Security `Principal` datu atlasē (likvidēti testa lietotāju ievades lauki).
+- Uzlabots Popover lodziņa dizains, iekļaujot notikuma autoru un uzaicinātās personas.
+
+### Izlabots
+- Novērsta `NullPointerException` (MapStruct) saglabājot jaunus kalendāra notikumus.
+- Novērsta 500 kļūda Graph API meklēšanā `User.Read.All` tiesību trūkuma gadījumā (tagad atgriež tukšu sarakstu).
+
 ## [1.8.0] - 2026-06-06
 ### Pievienots (Added)
 - Pilna Microsoft Entra ID (Azure AD) SSO integrācija ar OAuth2/OIDC, ieskaitot korektu izrakstīšanās (Logout) plūsmu, kas izdzēš Microsoft sesiju.

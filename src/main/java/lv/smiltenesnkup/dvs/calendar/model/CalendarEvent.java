@@ -39,6 +39,13 @@ public class CalendarEvent {
     @Column(name = "is_all_day", nullable = false)
     private boolean allDay;
 
+    @Column(name = "created_by", nullable = false)
+    private String createdBy;
+
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
+    @Column(name = "invited_persons", columnDefinition = "jsonb")
+    private java.util.List<String> invitedPersons;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")
     private CalendarCategory category;
