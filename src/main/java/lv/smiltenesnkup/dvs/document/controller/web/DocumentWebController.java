@@ -30,7 +30,7 @@ public class DocumentWebController {
     public String showDashboard(Model model) {
         log.info("Lietotājs atver DVS Dashboard skatu");
 
-        Long listId = 3L; // Cieti iekodēts testa saraksta ID
+        Long listId = 1L; // Atjaunots uz ID 1, kas atbilst V1__baseline.sql sākumdatiem
 
         model.addAttribute("pageTitle", "Mans Panelis - DVS");
         model.addAttribute("listId", listId);

@@ -1,3 +1,23 @@
+// Nolasa CSRF tokenu no pārlūka sīkdatnēm (Cookies)
+function getCsrfToken() {
+    const match = document.cookie.match(new RegExp('(^| )XSRF-TOKEN=([^;]+)'));
+    return match ? match[2] : null;
+}
+
+// Globāli pārraksta (Override) native fetch API, lai automātiski pievienotu CSRF hederi visiem POST/PUT/DELETE pieprasījumiem
+const originalFetch = window.fetch;
+window.fetch = function() {
+    let [resource, config] = arguments;
+    if (config && (config.method === 'POST' || config.method === 'PUT' || config.method === 'DELETE')) {
+        config.headers = config.headers || {};
+        const csrfToken = getCsrfToken();
+        if (csrfToken) {
+            config.headers['X-XSRF-TOKEN'] = csrfToken;
+        }
+    }
+    return originalFetch(resource, config);
+};
+
 document.addEventListener('DOMContentLoaded', function() {
     // 1. Iestata dinamisko datumu augšējā joslā latviešu valodā
     const dateDisplay = document.getElementById('currentDateDisplay');

@@ -2,6 +2,7 @@ package lv.smiltenesnkup.dvs.task.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import lv.smiltenesnkup.dvs.task.enums.SubTaskStatus;
 
 import java.time.LocalDate;
 
@@ -34,8 +35,9 @@ public class SubTask {
     @Column(name = "due_date")
     private LocalDate dueDate; // Apakšuzdevuma izpildes termiņš
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String status = "Nav sākts";
+    private SubTaskStatus status = SubTaskStatus.NOT_STARTED;
 
     @Column(name = "order_index", nullable = false)
     private Integer orderIndex; // Norāda secību (1, 2, 3)

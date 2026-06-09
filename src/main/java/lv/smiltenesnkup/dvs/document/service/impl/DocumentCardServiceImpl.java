@@ -1,5 +1,6 @@
 package lv.smiltenesnkup.dvs.document.service.impl;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import lv.smiltenesnkup.dvs.document.dto.DocumentCardDTO;
@@ -7,8 +8,6 @@ import lv.smiltenesnkup.dvs.document.mapper.DocumentCardMapper;
 import lv.smiltenesnkup.dvs.document.model.*;
 import lv.smiltenesnkup.dvs.document.repository.*;
 import lv.smiltenesnkup.dvs.common.exception.ResourceNotFoundException;
-import lv.smiltenesnkup.dvs.document.enums.FileRole;
-import lv.smiltenesnkup.dvs.document.mapper.DocumentFileMapper;
 import lv.smiltenesnkup.dvs.document.enums.FileRole;
 import lv.smiltenesnkup.dvs.document.mapper.DocumentFileMapper;
 import lv.smiltenesnkup.dvs.document.model.DocumentFile;
@@ -34,6 +33,7 @@ public class DocumentCardServiceImpl implements DocumentCardService {
     private final DocumentFileMapper documentFileMapper;
     private final FieldDefinitionRepository fieldDefinitionRepository;
     private final MetadataValidationService metadataValidationService;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
 
     @Override
@@ -83,11 +83,16 @@ public class DocumentCardServiceImpl implements DocumentCardService {
     @Override
     @Transactional(readOnly = true)
     public List<DocumentCardDTO> searchByMetadata(Long listId, String key, String value) {
-        log.info("Searching document cards in list {} by metadata key '{}' and value '{}'", listId, key, value);
+        log.info("Meklē dokumentu kartītes sarakstā {} pēc metadatu atslēgas '{}' un vērtības '{}'", listId, key, value);
 
-        // Noformatē meklēšanas parametrus kā JSON stringu. Piemēram: {"Saņemšanas veids": "E-pasts"}
-        // PostgreSQL @> operators sapratīs šo struktūru un meklēs to iekš JSONB kolonnas.
-        String jsonQuery = String.format("{\"%s\": \"%s\"}", key, value);
+        // Izmanto ObjectMapper, lai droši ģenerētu JSON struktūru un novērstu SQL injekcijas risku
+        String jsonQuery;
+        try {
+            jsonQuery = objectMapper.writeValueAsString(java.util.Map.of(key, value));
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            log.error("Kļūda serializējot meklēšanas parametrus", e);
+            throw new lv.smiltenesnkup.dvs.common.exception.BusinessLogicException("Kļūda apstrādājot meklēšanas parametrus");
+        }
 
         return documentCardRepository.findByMetadataContains(listId, jsonQuery).stream()
                 .map(documentCardMapper::toDto)

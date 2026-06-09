@@ -13,4 +13,10 @@ public interface ListPermissionRepository extends JpaRepository<ListPermission, 
 
     void deleteByDvsUserId(Long userId);
 
+    /**
+     * Ielādē visas privilēģijas kopā ar saistīto sarakstu (JOIN FETCH), lai novērstu N+1 problēmu.
+     */
+    @org.springframework.data.jpa.repository.Query("SELECT lp FROM ListPermission lp JOIN FETCH lp.documentList")
+    List<ListPermission> findAllWithDocumentList();
+
 }

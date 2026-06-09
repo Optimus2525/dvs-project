@@ -40,6 +40,9 @@ class CalendarServiceImplTest {
 
     private CalendarEvent existingEvent;
 
+    @Mock
+    private org.springframework.context.ApplicationEventPublisher eventPublisher;
+
     @BeforeEach
     void setUp() {
         existingEvent = CalendarEvent.builder()

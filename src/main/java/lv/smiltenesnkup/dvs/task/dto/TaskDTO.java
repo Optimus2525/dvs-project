@@ -9,6 +9,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lv.smiltenesnkup.dvs.task.enums.TaskPriority;
+import lv.smiltenesnkup.dvs.task.enums.TaskStatus;
 import lv.smiltenesnkup.dvs.task.enums.TaskType;
 
 import java.time.LocalDate;
@@ -52,7 +53,7 @@ public class TaskDTO {
     private TaskPriority priority;
 
     @NotBlank(message = "Statuss ir obligāts")
-    private String status;
+    private TaskStatus status;
 
     private Long documentCardId;
 

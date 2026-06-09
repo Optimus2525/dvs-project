@@ -7,6 +7,7 @@ import lv.smiltenesnkup.dvs.task.dto.NotificationDTO;
 import lv.smiltenesnkup.dvs.task.dto.SubTaskDTO;
 import lv.smiltenesnkup.dvs.task.dto.TaskDTO;
 import lv.smiltenesnkup.dvs.task.dto.TaskUpdateDTO;
+import lv.smiltenesnkup.dvs.task.enums.SubTaskStatus;
 import lv.smiltenesnkup.dvs.task.enums.TaskType;
 import lv.smiltenesnkup.dvs.task.mapper.NotificationMapper;
 import lv.smiltenesnkup.dvs.task.mapper.TaskMapper;
@@ -35,13 +36,15 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class TaskServiceImpl implements TaskService {
 
+
     private final TaskRepository taskRepository;
-    private final SubTaskRepository subTaskRepository;
     private final NotificationRepository notificationRepository;
     private final TaskMapper taskMapper;
     private final NotificationMapper notificationMapper;
     private final SharePointGraphService graphService; // Šo vēlāk izmantosim Admin panelim
     private final DvsUserRepository dvsUserRepository; // Pievienojam jauno repozitoriju
+    private final SubTaskRepository subTaskRepository;
+
 
     @Override
     @Transactional(readOnly = true)
@@ -51,6 +54,7 @@ public class TaskServiceImpl implements TaskService {
                 .orElseThrow(() -> new ResourceNotFoundException("Uzdevums nav atrasts ar ID: " + id));
         return taskMapper.toDto(task);
     }
+
 
     @Override
     @Transactional
@@ -112,14 +116,14 @@ public class TaskServiceImpl implements TaskService {
                 // Iestata sākotnējos statusus atkarībā no tipa
                 if (taskDTO.getTaskType() == TaskType.COMPLEX_PARALLEL) {
                     st.setActive(true);
-                    st.setStatus("Nav sākts");
+                    st.setStatus(lv.smiltenesnkup.dvs.task.enums.SubTaskStatus.NOT_STARTED);
                 } else { // COMPLEX_SEQUENTIAL
                     if (i == 0) {
                         st.setActive(true);
-                        st.setStatus("Nav sākts");
+                        st.setStatus(lv.smiltenesnkup.dvs.task.enums.SubTaskStatus.NOT_STARTED);
                     } else {
                         st.setActive(false);
-                        st.setStatus("Gaida uz citu");
+                        st.setStatus(lv.smiltenesnkup.dvs.task.enums.SubTaskStatus.WAITING);
                     }
                 }
             }
@@ -131,7 +135,7 @@ public class TaskServiceImpl implements TaskService {
                     // Tiek iestatīti obligātie noklusējuma lauki, lai nerastos datubāzes kļūdas
                     st.setOrderIndex(i + 1);
                     st.setActive(true);
-                    st.setStatus("Nav sākts");
+                    st.setStatus(lv.smiltenesnkup.dvs.task.enums.SubTaskStatus.NOT_STARTED);
                 }
             }
         }
@@ -158,6 +162,7 @@ public class TaskServiceImpl implements TaskService {
         return taskMapper.toDto(savedTask);
     }
 
+
     @Override
     @Transactional
     public void updateSubTask(Long subTaskId, String newStatus, String description) {
@@ -174,41 +179,46 @@ public class TaskServiceImpl implements TaskService {
         }
 
         // Tiek pārbaudīts, vai statuss ir mainījies, lai velti neizsauktu darbplūsmas loģiku
-        if (newStatus != null && !newStatus.equals(currentSubTask.getStatus())) {
-            currentSubTask.setStatus(newStatus);
+        if (newStatus != null) {
+            SubTaskStatus parsedStatus = SubTaskStatus.fromLabel(newStatus);
 
-            // Darbplūsmas (Workflow) loģika secīgajam uzdevumam
-            if (parentTask.getTaskType() == TaskType.COMPLEX_SEQUENTIAL) {
+            if (!parsedStatus.equals(currentSubTask.getStatus())) {
+                currentSubTask.setStatus(parsedStatus);
 
-                // 1. GADĪJUMS: Pabeigts -> Aktivizē nākamo
-                if ("Pabeigts".equals(newStatus)) {
-                    currentSubTask.setActive(false); // Šis lietotājs savu darbu beidza
+                // Darbplūsmas (Workflow) loģika secīgajam uzdevumam
+                if (parentTask.getTaskType() == TaskType.COMPLEX_SEQUENTIAL) {
 
-                    SubTask nextSubTask = subTaskRepository.findByParentTaskIdAndOrderIndex(parentTask.getId(), currentSubTask.getOrderIndex() + 1);
-                    if (nextSubTask != null) {
-                        nextSubTask.setActive(true);
-                        nextSubTask.setStatus("Nav sākts");
-                        subTaskRepository.save(nextSubTask);
+                    // 1. GADĪJUMS: Pabeigts -> Aktivizē nākamo
+                    if (parsedStatus == lv.smiltenesnkup.dvs.task.enums.SubTaskStatus.COMPLETED) {
+                        currentSubTask.setActive(false); // Šis lietotājs savu darbu beidza
 
-                        createNotification(nextSubTask.getAssignee(), "Ir pienākusi Tava kārta uzdevumā: " + parentTask.getTitle(), parentTask);
+                        SubTask nextSubTask = subTaskRepository.findByParentTaskIdAndOrderIndex(parentTask.getId(), currentSubTask.getOrderIndex() + 1);
+                        if (nextSubTask != null) {
+                            nextSubTask.setActive(true);
+                            nextSubTask.setStatus(lv.smiltenesnkup.dvs.task.enums.SubTaskStatus.NOT_STARTED);
+                            subTaskRepository.save(nextSubTask);
+
+                            createNotification(nextSubTask.getAssignee(), "Ir pienākusi Tava kārta uzdevumā: " + parentTask.getTitle(), parentTask);
+                        }
+                        createNotification(parentTask.getAssignee(), currentSubTask.getAssignee() + " pabeidza savu daļu uzdevumā: " + parentTask.getTitle(), parentTask);
                     }
-                    createNotification(parentTask.getAssignee(), currentSubTask.getAssignee() + " pabeidza savu daļu uzdevumā: " + parentTask.getTitle(), parentTask);
-                }
 
-                // 2. GADĪJUMS: Atgriezts labošanai -> Aktivizē iepriekšējo
-                else if ("Atgriezts labošanai".equals(newStatus)) {
-                    currentSubTask.setActive(false);
-                    currentSubTask.setStatus("Gaida uz citu");
+                    // 2. GADĪJUMS: Atgriezts labošanai -> Aktivizē iepriekšējo
+                    else if (parsedStatus == lv.smiltenesnkup.dvs.task.enums.SubTaskStatus.RETURNED) {
+                        currentSubTask.setActive(false);
+                        currentSubTask.setStatus(lv.smiltenesnkup.dvs.task.enums.SubTaskStatus.WAITING);
 
-                    SubTask prevSubTask = subTaskRepository.findByParentTaskIdAndOrderIndex(parentTask.getId(), currentSubTask.getOrderIndex() - 1);
-                    if (prevSubTask != null) {
-                        prevSubTask.setActive(true);
-                        prevSubTask.setStatus("Notiek izpilde"); // Statuss tiek nomainīts uz 'Notiek izpilde'
-                        subTaskRepository.save(prevSubTask);
+                        SubTask prevSubTask = subTaskRepository.findByParentTaskIdAndOrderIndex(parentTask.getId(), currentSubTask.getOrderIndex() - 1);
+                        if (prevSubTask != null) {
+                            prevSubTask.setActive(true);
+                            prevSubTask.setStatus(lv.smiltenesnkup.dvs.task.enums.SubTaskStatus.IN_PROGRESS);
+                            subTaskRepository.save(prevSubTask);
 
-                        createNotification(prevSubTask.getAssignee(), "Tavs darbs tika atgriezts labošanai uzdevumā: " + parentTask.getTitle(), parentTask);
+                            createNotification(prevSubTask.getAssignee(), "Tavs darbs tika atgriezts labošanai uzdevumā: " + parentTask.getTitle(), parentTask);
+                        }
+
+                        createNotification(parentTask.getAssignee(), "Uzdevums atgriezts labošanai: " + parentTask.getTitle(), parentTask);
                     }
-                    createNotification(parentTask.getAssignee(), "Uzdevums atgriezts labošanai: " + parentTask.getTitle(), parentTask);
                 }
             }
         }

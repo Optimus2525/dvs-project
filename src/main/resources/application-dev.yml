@@ -1,0 +1,33 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/dvs_db
+    username: postgres
+    password: root
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  security:
+    oauth2:
+      client:
+        registration:
+          entra:
+            client-id: "d82619f1-2373-4d6d-a69e-5e95ca235a5c"
+            client-secret: ${AZURE_CLIENT_SECRET}
+            scope: openid, profile, email, User.Read
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+        provider:
+          entra:
+            issuer-uri: "https://login.microsoftonline.com/d0df967e-5568-4af1-8e43-ffd40ca8004a/v2.0"
+            user-name-attribute: name
+
+azure:
+  entra:
+    tenant-id: "d0df967e-5568-4af1-8e43-ffd40ca8004a"
+    client-id: "d82619f1-2373-4d6d-a69e-5e95ca235a5c"
+    client-secret: ${AZURE_CLIENT_SECRET}

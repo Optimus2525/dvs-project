@@ -48,6 +48,7 @@ public class DocumentApiController {
     // ==========================================
 
     @PostMapping("/cards")
+    @org.springframework.security.access.prepost.PreAuthorize("@permissionService.hasAccess(#dto.documentListId, 'EDITOR')")
     public ResponseEntity<DocumentCardDTO> createCard(@Valid @RequestBody DocumentCardDTO dto) {
         log.info("REST request to create DocumentCard for list ID: {}", dto.getDocumentListId());
         return ResponseEntity.ok(documentCardService.createDocumentCard(dto));

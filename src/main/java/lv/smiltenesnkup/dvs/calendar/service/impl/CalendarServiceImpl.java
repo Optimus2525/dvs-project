@@ -5,16 +5,17 @@ import lombok.extern.slf4j.Slf4j;
 import lv.smiltenesnkup.dvs.calendar.dto.CalendarCategoryDTO;
 import lv.smiltenesnkup.dvs.calendar.dto.CalendarEventDTO;
 import lv.smiltenesnkup.dvs.calendar.dto.CalendarEventUpdateDTO;
+import lv.smiltenesnkup.dvs.calendar.event.CalendarSyncEvent;
 import lv.smiltenesnkup.dvs.calendar.mapper.CalendarCategoryMapper;
 import lv.smiltenesnkup.dvs.calendar.mapper.CalendarEventMapper;
 import lv.smiltenesnkup.dvs.calendar.model.CalendarEvent;
 import lv.smiltenesnkup.dvs.calendar.repository.CalendarCategoryRepository;
 import lv.smiltenesnkup.dvs.calendar.repository.CalendarEventRepository;
 import lv.smiltenesnkup.dvs.common.exception.ResourceNotFoundException;
-import lv.smiltenesnkup.dvs.calendar.repository.CalendarEventRepository;
 import lv.smiltenesnkup.dvs.calendar.service.CalendarService;
 import lv.smiltenesnkup.dvs.sharepoint.service.SharePointGraphService;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,7 +35,7 @@ public class CalendarServiceImpl implements CalendarService {
     private final CalendarEventRepository eventRepository;
     private final CalendarCategoryMapper categoryMapper;
     private final CalendarEventMapper eventMapper;
-    private final SharePointGraphService sharePointGraphService;
+    private final ApplicationEventPublisher eventPublisher;
 
 
     @Override
@@ -100,17 +101,7 @@ public class CalendarServiceImpl implements CalendarService {
     public List<CalendarEventDTO> getEventsInPeriod(LocalDateTime start, LocalDateTime end, String currentUser) {
         log.info("Izgūst kalendāra notikumus periodam: {} - {} lietotājam: {}", start, end, currentUser);
         return eventRepository.findEventsInPeriodForUser(start, end, currentUser).stream()
-                .map(entity -> {
-                    CalendarEventDTO dto = eventMapper.toDto(entity);
-                    // DROŠĪBAS LABOJUMS: Ja MapStruct nav pārkompilējies, ieliekam datus manuāli!
-                    if (dto.getInvitedPersons() == null && entity.getInvitedPersons() != null) {
-                        dto.setInvitedPersons(entity.getInvitedPersons());
-                    }
-                    if (dto.getCreatedBy() == null && entity.getCreatedBy() != null) {
-                        dto.setCreatedBy(entity.getCreatedBy());
-                    }
-                    return dto;
-                })
+                .map(eventMapper::toDto)
                 .collect(Collectors.toList());
     }
 
@@ -129,18 +120,10 @@ public class CalendarServiceImpl implements CalendarService {
         log.info("Izveido jaunu kalendāra notikumu: {}", dto.getTitle());
 
         CalendarEvent entity = eventMapper.toEntity(dto);
-
-        // DROŠĪBAS LABOJUMS: Ja MapStruct nav pārkompilējies, iestatām vērtības manuāli
-        if (entity.getCreatedBy() == null) {
-            entity.setCreatedBy(dto.getCreatedBy() != null ? dto.getCreatedBy() : "Lietotājs");
-        }
-        if (entity.getInvitedPersons() == null && dto.getInvitedPersons() != null) {
-            entity.setInvitedPersons(dto.getInvitedPersons());
-        }
-
         CalendarEvent savedEntity = eventRepository.save(entity);
 
-        // TODO: Asinhroni nosūtīt `savedEntity` uz Graph API un atjaunināt `sharepointItemId`
+        // Publicē asinhronu notikumu, nebloķējot lietotāja UI
+        eventPublisher.publishEvent(new CalendarSyncEvent(savedEntity.getId(), "CREATE"));
 
         return eventMapper.toDto(savedEntity);
     }

@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lv.smiltenesnkup.dvs.task.enums.SubTaskStatus;
 
 import java.time.LocalDate;
 
@@ -28,7 +29,7 @@ public class SubTaskDTO {
 
     private LocalDate dueDate;
 
-    private String status;
+    private SubTaskStatus status;
 
     private Integer orderIndex;
 

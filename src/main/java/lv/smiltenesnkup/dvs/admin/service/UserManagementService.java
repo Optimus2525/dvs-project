@@ -30,27 +30,40 @@ public class UserManagementService {
     private final ListPermissionRepository listPermissionRepository;
     private final DocumentListRepository documentListRepository;
 
+
     @Transactional(readOnly = true)
     public List<DvsUserManageDTO> getAllUsers() {
-        return dvsUserRepository.findAll().stream().map(user -> {
+        // 1. Ielādē visus DVS lietotājus
+        List<DvsUser> users = dvsUserRepository.findAll();
+
+        // 2. Ielādē visas lomas un sagrupē pēc lietotājvārda
+        Map<String, List<AppUserRole>> rolesMap = appUserRoleRepository.findAll().stream()
+                .collect(Collectors.groupingBy(AppUserRole::getUsername));
+
+        // 3. Ielādē visas privilēģijas (ar JOIN FETCH sarakstiem) un sagrupē pēc lietotāja ID
+        Map<Long, List<ListPermission>> permissionsMap = listPermissionRepository.findAllWithDocumentList().stream()
+                .collect(Collectors.groupingBy(lp -> lp.getDvsUser().getId()));
+
+        return users.stream().map(user -> {
             DvsUserManageDTO dto = new DvsUserManageDTO();
             dto.setId(user.getId());
             dto.setUsername(user.getUsername());
             dto.setActive(user.isActive());
 
-            // Pārbauda, vai ir administrators
-            dto.setAdmin(appUserRoleRepository.findAllByUsername(user.getUsername())
-                    .stream().anyMatch(r -> r.getRoleName().equals("ROLE_ADMIN")));
+            // Pārbauda, vai ir administrators (izmantojot atmiņā ielādēto Map)
+            List<AppUserRole> userRoles = rolesMap.getOrDefault(user.getUsername(), List.of());
+            dto.setAdmin(userRoles.stream().anyMatch(r -> r.getRoleName().equals("ROLE_ADMIN")));
 
-            // Ielasa sarakstu privilēģijas
+            // Ielasa sarakstu privilēģijas (izmantojot atmiņā ielādēto Map)
             Map<Long, String> perms = new HashMap<>();
-            listPermissionRepository.findAllByDvsUserId(user.getId())
-                    .forEach(lp -> perms.put(lp.getDocumentList().getId(), lp.getPermissionLevel().name()));
-            dto.setListPermissions(perms);
+            List<ListPermission> userPerms = permissionsMap.getOrDefault(user.getId(), List.of());
+            userPerms.forEach(lp -> perms.put(lp.getDocumentList().getId(), lp.getPermissionLevel().name()));
 
+            dto.setListPermissions(perms);
             return dto;
         }).collect(Collectors.toList());
     }
+
 
     @Transactional
     public DvsUserManageDTO saveOrUpdateUser(DvsUserManageDTO dto) {

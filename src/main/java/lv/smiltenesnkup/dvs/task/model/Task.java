@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import lv.smiltenesnkup.dvs.document.model.DocumentCard;
 import lv.smiltenesnkup.dvs.task.enums.TaskPriority;
+import lv.smiltenesnkup.dvs.task.enums.TaskStatus;
 import lv.smiltenesnkup.dvs.task.enums.TaskType;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
@@ -54,8 +55,9 @@ public class Task {
     @Column(nullable = false)
     private TaskPriority priority = TaskPriority.NORMAL;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String status = "Nav sākts";
+    private TaskStatus status = TaskStatus.NOT_STARTED;
 
     // Opcionāla saistība ar dokumentu kartīti
     @ManyToOne(fetch = FetchType.LAZY)

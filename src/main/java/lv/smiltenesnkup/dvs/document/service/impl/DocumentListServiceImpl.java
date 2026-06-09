@@ -2,16 +2,13 @@ package lv.smiltenesnkup.dvs.document.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import lv.smiltenesnkup.dvs.admin.dto.DocumentListCreateRequestDTO;
 import lv.smiltenesnkup.dvs.document.dto.DocumentListDTO;
-import lv.smiltenesnkup.dvs.document.dto.FieldDefinitionDTO;
 import lv.smiltenesnkup.dvs.document.mapper.DocumentListMapper;
 import lv.smiltenesnkup.dvs.document.mapper.FieldDefinitionMapper;
 import lv.smiltenesnkup.dvs.document.model.DocumentList;
 import lv.smiltenesnkup.dvs.document.repository.DocumentListRepository;
 import lv.smiltenesnkup.dvs.document.repository.FieldDefinitionRepository;
 import lv.smiltenesnkup.dvs.common.exception.ResourceNotFoundException;
-import lv.smiltenesnkup.dvs.document.repository.FieldDefinitionRepository;
 import lv.smiltenesnkup.dvs.document.service.DocumentListService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +28,7 @@ public class DocumentListServiceImpl implements DocumentListService {
     private final DocumentListMapper documentListMapper;
     private final FieldDefinitionRepository fieldDefinitionRepository;
     private final FieldDefinitionMapper fieldDefinitionMapper;
+
 
     /**
      * Izgūst visus sistēmā reģistrētos dokumentu sarakstus.

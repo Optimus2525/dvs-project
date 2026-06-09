@@ -3,6 +3,26 @@
 Visi ievērojamie šī projekta labojumi tiks dokumentēti šajā failā.
 Projekts ievēro [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.11.0] - 2026-06-09
+### Pievienots (Added)
+- `application-dev.yml` un `application-prod.yml` konfigurācijas profili, atdalot vides mainīgos.
+- Notikumu vadīta (Event-driven) arhitektūra kalendāra modulim (`@Async`, `CalendarSyncEvent`), lai nebloķētu UI.
+- `SecurityUtils` un `PermissionService` centralizētai lietotāju tiesību (RBAC) pārbaudei caur `@PreAuthorize`.
+- `TaskStatus` un `SubTaskStatus` Enums stingrākai statusu kontrolei.
+- Globāls Vanilla JS `fetch` pārtvērējs automātiskai CSRF tokenu sūtīšanai.
+
+### Labots (Fixed)
+- Novērsts SQL Injekcijas risks `DocumentCardServiceImpl` JSONB meklēšanā, izmantojot `ObjectMapper`.
+- Salabota SharePoint 400 Bad Request kļūdas apstrāde Dokumentu Bibliotēkām (Attachments endpoint).
+- Atjaunota un salabota Spring Security CSRF aizsardzība (CookieCsrfTokenRepository).
+- Novērsta MapStruct un Lombok anotāciju procesoru kompilācijas secības kļūda `pom.xml`.
+
+### Mainīts/Optimizēts (Changed/Optimized)
+- **[Kritisks]** Noņemts `@Transactional` no ārējiem Graph API izsaukumiem `SharePointSyncService`, lai novērstu DB savienojumu pūla (Connection Pool) izsīkumu.
+- **[Kritisks]** Optimizēta N+1 vaicājumu problēma `UserManagementService`, izmantojot `JOIN FETCH` un datu grupēšanu atmiņā.
+- Saplacinātas (Squashed) Flyway migrācijas V1-V16 vienā `V1__baseline.sql` failā.
+- Pievienoti PostgreSQL GIN indeksi JSONB kolonnām (`metadata`, `followers`), ievērojami uzlabojot meklēšanas ātrumu.
+
 ## [1.10.0] - 2026-06-08
 ### Pievienots
 - "Vārtu sarga" (Gatekeeper) drošības modelis – ielogoties DVS var tikai tie Entra ID lietotāji, kuri ir reģistrēti lokālajā `dvs_user` tabulā.

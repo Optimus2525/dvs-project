@@ -4,10 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
+import lv.smiltenesnkup.dvs.sharepoint.exception.SharePointSyncException;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
@@ -75,20 +73,6 @@ public class SharePointGraphService {
         }
         return null;
     }
-
-    // Piemērs metodei, kas izmanto šo loģiku (vēlāk šī tiks pielāgota reālajiem Graph API end-pointiem)
-    /*
-    public String getSharePointListItems(String listId) {
-        return executeWithRetry(() ->
-            restTemplate.exchange(
-                "https://graph.microsoft.com/v1.0/sites/{site-id}/lists/" + listId + "/items",
-                HttpMethod.GET,
-                new HttpEntity<>(createHeadersWithToken()),
-                String.class
-            )
-        );
-    }
-    */
 
 
     /**
@@ -190,14 +174,19 @@ public class SharePointGraphService {
             );
             return objectMapper.readTree(response).get("value");
 
-        } catch (org.springframework.web.client.HttpClientErrorException e) {
-            // Šeit mēs noķeram Microsoft 400 Bad Request kļūdu!
-            log.warn("Pielikumu galapunkts (endpoint) nav pieejams ierakstam {}. Turpina bez pielikumiem.", itemId);
-            return objectMapper.createArrayNode();
-
+        } catch (HttpClientErrorException e) {
+            // Ja tas ir 400 Bad Request (piem., dokumentu bibliotēka) vai 404 Not Found, mēs vienkārši atgriežam tukšu sarakstu
+            if (e.getStatusCode().isSameCodeAs(HttpStatus.BAD_REQUEST) ||
+                    e.getStatusCode().isSameCodeAs(HttpStatus.NOT_FOUND)) {
+                log.warn("Pielikumi nav atbalstīti vai nav atrasti ierakstam {}. Turpina bez pielikumiem.", itemId);
+                return objectMapper.createArrayNode();
+            }
+            // Ja kļūda ir cita (piemēram, 401 Unauthorized vai 403 Forbidden), tad gan metam izņēmumu
+            log.error("Kritiska HTTP kļūda pieprasot pielikumus ierakstam {}: {}", itemId, e.getMessage());
+            throw new SharePointSyncException("HTTP kļūda pieprasot pielikumus ierakstam: " + itemId, e);
         } catch (Exception e) {
             log.error("Kļūda parsējot Graph API atbildi pielikumiem", e);
-            return objectMapper.createArrayNode();
+            throw new SharePointSyncException("Kļūda parsējot Graph API atbildi pielikumiem ierakstam: " + itemId, e);
         }
     }
 
